@@ -97,7 +97,7 @@ export default function Dashboard() {
     console.log('useridxxxx', userx)
     try {
       // Authenticate as admin to access verifications
-      await pb.admins.authWithPassword('bigdevtemy@gmail.com', 'Ademilola2@')
+      await pb.admins.authWithPassword('admin@ohcsf.com', 'admin12345')
       let filter = ''
       if (startDate && endDate) {
         const start = new Date(startDate)
@@ -159,14 +159,14 @@ export default function Dashboard() {
       setLoading(false)
     }
   }
-  console.log('currentUserxxx', currentUser?.user_id, verifications)
+  console.log('currentUserxxx', currentUser?.user_id, currentUser)
 
   const totalVerifications = verifications.filter(
     (v) => v.status == 'complete'
   ).length
 
   const completedVerifications = verifications.filter(
-    (v) => v.status === 'complete' && v.submittedBy === currentUser?.user_id
+    (v) => v.status === 'complete' && v.submittedBy == currentUser?.user_id
   ).length
   const pendingRequests = verifications.filter(
     (v) => v.status === 'pending' && v.submittedBy == currentUser?.user_id
@@ -221,7 +221,7 @@ export default function Dashboard() {
   const filteredVerifications = verifications.filter(
     (v) =>
       v.ippsId.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      currentUser?.user_id
+      v.submittedBy == currentUser?.user_id
   )
 
   console.log(filteredVerifications)
@@ -245,18 +245,12 @@ export default function Dashboard() {
               Start Verification
             </button>
 
-            {/* <button
+            <button
               onClick={() => router.push('/upload-image')}
               className='bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200'
             >
               Upload Image
             </button>
-            <button
-              onClick={handleAddCronJob}
-              className='bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200'
-            >
-              Add Cron Job
-            </button> */}
 
             <button
               onClick={handleLogout}
@@ -390,7 +384,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {new Date(v.submittedAt).toLocaleString()}
+                        {new Date(v.submittedAt).toISOString().split('T')[0]}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-center'>
                         {v.sync === 1 ? (

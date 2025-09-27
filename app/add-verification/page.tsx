@@ -49,6 +49,7 @@ export default function AddVerification() {
   const [organisations, setOrganisations] = useState<OrgDep[]>([])
   const [departments, setDepartments] = useState<OrgDep[]>([])
   const [tags, setTags] = useState<OrgDep[]>([])
+  const [possibleIssues, setPossibleIssues] = useState<string[]>([])
   const [exceptionData, setExceptionData] = useState({
     ippsId: '',
     firstName: '',
@@ -173,17 +174,6 @@ export default function AddVerification() {
   const [verify, setVerify] = useState<{
     [key: string]: { [field: string]: boolean }
   }>({})
-
-  const possibleIssues = [
-    'Name not match',
-    'Invalid DOB certificate',
-    'No valid ID provided',
-    'Address mismatch',
-    'Phone number incorrect',
-    'Medical records incomplete',
-    'Bank details unverified',
-    'Education certificates missing',
-  ]
 
   const tabs = [
     { key: 'basic', label: 'Basic Information' },
@@ -395,8 +385,37 @@ export default function AddVerification() {
       try {
         const tagList = await pb.collection('tags').getFullList()
         setTags(tagList as unknown as OrgDep[])
+        const tagNames = (tagList as unknown as { name: string }[]).map(
+          (tag) => tag.name
+        )
+        // Use tags if available, otherwise use default issues
+        setPossibleIssues(
+          tagNames.length > 0
+            ? tagNames
+            : [
+                'Name not match',
+                'Invalid DOB certificate',
+                'No valid ID provided',
+                'Address mismatch',
+                'Phone number incorrect',
+                'Medical records incomplete',
+                'Bank details unverified',
+                'Education certificates missing',
+              ]
+        )
       } catch (error) {
         console.error('Failed to fetch tags:', error)
+        // Fallback to default issues if tags collection doesn't exist or fails
+        setPossibleIssues([
+          'Name not match',
+          'Invalid DOB certificate',
+          'No valid ID provided',
+          'Address mismatch',
+          'Phone number incorrect',
+          'Medical records incomplete',
+          'Bank details unverified',
+          'Education certificates missing',
+        ])
       }
     }
     fetchOrgDepTags()

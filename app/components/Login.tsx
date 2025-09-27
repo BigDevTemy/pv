@@ -30,7 +30,7 @@ export default function Login() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        await pb.admins.authWithPassword('bigdevtemy@gmail.com', 'Ademilola2@')
+        await pb.admins.authWithPassword('admin@ohcsf.com', 'admin12345')
         const records = await pb.collection('loggedInUsers').getFullList()
 
         console.log('record', records)
@@ -225,11 +225,14 @@ export default function Login() {
               }
             }
 
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('currentUser', JSON.stringify(data.user))
-
             const dataUserWithUserId = data.user
             dataUserWithUserId.user_id = data.user.id
+
+            localStorage.setItem('token', data.token)
+            localStorage.setItem(
+              'currentUser',
+              JSON.stringify(dataUserWithUserId)
+            )
 
             router.push('/dashboard')
           } else {
