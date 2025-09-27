@@ -9,6 +9,10 @@ export default function Home() {
         |{' '}
         <a href='/signup' className='text-primaryy hover:underline'>
           Signup
+        </a>{' '}
+        |{' '}
+        <a href='/biometrics' className='text-primaryy hover:underline'>
+          Biometrics
         </a>
       </div>
     </div>

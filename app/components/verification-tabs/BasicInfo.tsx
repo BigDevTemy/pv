@@ -1,3 +1,18 @@
+import { useState, useMemo, useEffect, useRef } from 'react'
+import DocumentsModal from './DocumentsModal'
+import Warning from '@mui/icons-material/Warning'
+import MoreHoriz from '@mui/icons-material/MoreHoriz'
+import Check from '@mui/icons-material/Check'
+import {
+  Add,
+  AttachFile,
+  DocumentScanner,
+  DocumentScannerOutlined,
+  DocumentScannerSharp,
+  Upload,
+  UploadFile,
+  UploadOutlined,
+} from '@mui/icons-material'
 interface Props {
   data: { [key: string]: string }
   onChange: (field: string, value: string) => void
@@ -6,8 +21,10 @@ interface Props {
   showIssueSelect: { [field: string]: boolean }
   setShowIssueSelect: (show: { [field: string]: boolean }) => void
   possibleIssues: string[]
+  ippsId: string
+  verify: { [key: string]: boolean }
+  onVerifyChange: (field: string, value: boolean) => void
 }
-
 export default function BasicInfo({
   data,
   onChange,
@@ -16,7 +33,20 @@ export default function BasicInfo({
   showIssueSelect,
   setShowIssueSelect,
   possibleIssues,
+  ippsId,
+  verify,
+  onVerifyChange,
 }: Props) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentField, setCurrentField] = useState('')
+  const [assignedDocuments, setAssignedDocuments] = useState<{
+    [field: string]: string[]
+  }>({})
+  const [hasBeenTagged, setHasBeenTagged] = useState<{
+    [field: string]: boolean
+  }>({})
+  const [initialData, setInitialData] = useState<{ [key: string]: string }>({})
   const fields = [
     'firstName',
     'lastName',
@@ -25,17 +55,60 @@ export default function BasicInfo({
     'maritalStatus',
     'nationality',
     'stateOfOrigin',
-    'lga',
+    'LocalGovernmentArea',
     'phoneNumber',
     'email',
     'residentialAddress',
     'nextOfKin',
     'nextOfKinRelationship',
   ]
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    setInitialData(data)
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowIssueSelect({})
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+  const filteredIssues = useMemo(
+    () =>
+      possibleIssues.filter((issue) =>
+        issue.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [possibleIssues, searchTerm]
+  )
+  const formatDate = (dateString: string) => {
+    if (!dateString) return ''
+    const datePart = dateString.split(' ')[0] // Take only the date part before space
+    const [year, month, day] = datePart.split('-')
+    return `${day}/${month}/${year}`
+  }
+
+  console.log('data', data)
   return (
     <>
-      {data.profilePic && (
+      {data.photo ? (
+        <div className='text-center mb-6'>
+          <img
+            src={data.photo}
+            alt='Profile'
+            className='w-40 h-40 rounded-full mx-auto bg-gray-200'
+          />
+        </div>
+      ) : (
         <div className='text-center mb-6'>
           <img
             src={data.profilePic}
@@ -44,9 +117,9 @@ export default function BasicInfo({
           />
         </div>
       )}
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+      <div className='grid grid-cols-1 gap-4'>
         {fields.map((field) => (
-          <div key={field} className='col-span-1'>
+          <div key={field} className='relative'>
             <label className='block text-sm font-medium text-gray-700 mb-1 capitalize'>
               {field.replace(/([A-Z])/g, ' $1').trim()}
             </label>
@@ -59,96 +132,104 @@ export default function BasicInfo({
                     ? 'tel'
                     : 'text'
                 }
-                value={data[field] || ''}
+                // value={data[field] || ''}
+                value={
+                  field.includes('date')
+                    ? formatDate(data[field] || '')
+                    : data[field] || ''
+                }
                 onChange={(e) => onChange(field, e.target.value)}
-                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                disabled={!!initialData[field]}
+                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy disabled:bg-gray-100 disabled:cursor-not-allowed'
                 placeholder={`Enter ${field.replace(/([A-Z])/g, ' $1').trim()}`}
               />
-              {showIssueSelect[field] ? (
-                <div className='flex flex-col space-y-1'>
-                  <div className='flex justify-end'>
-                    <button
-                      onClick={() =>
-                        setShowIssueSelect({
-                          ...showIssueSelect,
-                          [field]: false,
-                        })
-                      }
-                      className='text-gray-500 hover:text-gray-700'
-                    >
-                      <svg
-                        className='w-4 h-4'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M6 18L18 6M6 6l12 12'
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  {possibleIssues.map((issue) => (
-                    <label key={issue} className='flex items-center space-x-1'>
-                      <input
-                        type='checkbox'
-                        checked={issues[field]?.includes(issue) || false}
-                        onChange={(e) => {
-                          const currentIssues = issues[field] || []
-                          const newIssues = e.target.checked
-                            ? [...currentIssues, issue]
-                            : currentIssues.filter((i) => i !== issue)
-                          setIssues({ ...issues, [field]: newIssues })
-                        }}
-                        className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
-                      />
-                      <span className='text-xs'>{issue}</span>
-                    </label>
-                  ))}
+              <label className='flex items-center space-x-1'>
+                <input
+                  type='checkbox'
+                  checked={verify[field] || false}
+                  onChange={(e) => onVerifyChange(field, e.target.checked)}
+                  className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
+                />
+                <span className='text-xs'>Verify</span>
+              </label>
+              <div className='relative'>
+                <div className='flex items-center space-x-1'>
+                  <button
+                    onClick={() =>
+                      setShowIssueSelect({
+                        ...showIssueSelect,
+                        [field]: !showIssueSelect[field],
+                      })
+                    }
+                    className='text-gray-500 hover:text-gray-700'
+                  >
+                    {issues[field]?.length > 0 ? (
+                      <Warning className='w-5 h-5 text-red-500' />
+                    ) : (
+                      <MoreHoriz className='w-5 h-5' />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentField(field)
+                      setIsModalOpen(true)
+                    }}
+                    className='text-blue-500 hover:text-blue-700'
+                  >
+                    {assignedDocuments[field]?.length > 0 ? (
+                      <AttachFile className='w-5 h-5 text-green-500' />
+                    ) : (
+                      <UploadFile className='w-5 h-5' />
+                    )}
+                  </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() =>
-                    setShowIssueSelect({ ...showIssueSelect, [field]: true })
-                  }
-                  className={
-                    issues[field]?.length > 0
-                      ? 'text-red-500 hover:text-red-700'
-                      : 'text-green-500 hover:text-green-700'
-                  }
-                >
-                  {issues[field]?.length > 0 ? (
-                    <svg
-                      className='w-5 h-5'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M6 18L18 6M6 6l12 12'
+                {showIssueSelect[field] && (
+                  <div
+                    className='absolute right-0 top-full z-10 mt-2 w-72 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none'
+                    ref={dropdownRef}
+                  >
+                    <div className='p-2'>
+                      <input
+                        type='text'
+                        placeholder='Search issues...'
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
                       />
-                    </svg>
-                  ) : (
-                    <svg
-                      className='w-5 h-5'
-                      fill='currentColor'
-                      viewBox='0 0 20 20'
-                    >
-                      <path
-                        fillRule='evenodd'
-                        d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
-                        clipRule='evenodd'
-                      />
-                    </svg>
-                  )}
-                </button>
-              )}
+                    </div>
+                    <div className='max-h-48 overflow-y-auto p-2 light-scrollbar'>
+                      {filteredIssues.map((issue) => (
+                        <label
+                          key={issue}
+                          className='flex items-center space-x-2 p-1'
+                        >
+                          <input
+                            type='checkbox'
+                            checked={issues[field]?.includes(issue) || false}
+                            onChange={(e) => {
+                              const currentIssues = issues[field] || []
+                              const newIssues = e.target.checked
+                                ? [...currentIssues, issue]
+                                : currentIssues.filter((i) => i !== issue)
+                              setIssues({ ...issues, [field]: newIssues })
+                              if (e.target.checked) {
+                                setHasBeenTagged({
+                                  ...hasBeenTagged,
+                                  [field]: true,
+                                })
+                              }
+                            }}
+                            className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
+                          />
+                          <span className='text-sm font-medium text-gray-700'>
+                            {issue}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             {issues[field]?.length > 0 && (
               <div className='mt-2 flex flex-wrap gap-1'>
@@ -177,9 +258,47 @@ export default function BasicInfo({
                 ))}
               </div>
             )}
+            {assignedDocuments[field]?.length > 0 && (
+              <div className='mt-2 flex flex-wrap gap-1'>
+                {assignedDocuments[field].map((docName, index) => (
+                  <span
+                    key={`${field}-${index}`}
+                    className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
+                  >
+                    {'Document: ' + docName}
+                    <button
+                      onClick={() => {
+                        const newDocs = assignedDocuments[field].filter(
+                          (_, i) => i !== index
+                        )
+                        setAssignedDocuments({
+                          ...assignedDocuments,
+                          [field]: newDocs,
+                        })
+                      }}
+                      className='ml-1 text-blue-600 hover:text-blue-800'
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
+      <DocumentsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        ippsId={ippsId}
+        field={currentField}
+        onAssign={(field, docs, append) =>
+          setAssignedDocuments((prev) => ({
+            ...prev,
+            [field]: append ? [...(prev[field] || []), ...docs] : docs,
+          }))
+        }
+      />
     </>
   )
 }

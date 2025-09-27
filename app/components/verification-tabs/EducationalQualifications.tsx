@@ -1,3 +1,9 @@
+import { useState, useMemo, useRef, useEffect } from 'react'
+import DocumentsModal from './DocumentsModal'
+import Warning from '@mui/icons-material/Warning'
+import MoreHoriz from '@mui/icons-material/MoreHoriz'
+import AttachFile from '@mui/icons-material/AttachFile'
+import UploadFile from '@mui/icons-material/UploadFile'
 interface Props {
   data: { [key: string]: string }
   onChange: (field: string, value: string) => void
@@ -6,6 +12,7 @@ interface Props {
   showIssueSelect: { [field: string]: boolean }
   setShowIssueSelect: (show: { [field: string]: boolean }) => void
   possibleIssues: string[]
+  ippsId: string
 }
 
 export default function EducationalQualifications({
@@ -16,7 +23,15 @@ export default function EducationalQualifications({
   showIssueSelect,
   setShowIssueSelect,
   possibleIssues,
+  ippsId,
 }: Props) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentField, setCurrentField] = useState('')
+  const [assignedDocuments, setAssignedDocuments] = useState<{
+    [field: string]: string[]
+  }>({})
+  const [initialData, setInitialData] = useState<{ [key: string]: string }>({})
   const fields = [
     'highestQualification',
     'institutionAttended',
@@ -24,12 +39,40 @@ export default function EducationalQualifications({
     'professionalCertifications',
     'trainingAttended',
   ]
+  const filteredIssues = useMemo(
+    () =>
+      possibleIssues.filter((issue) =>
+        issue.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [possibleIssues, searchTerm]
+  )
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setInitialData(data)
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowIssueSelect({})
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   return (
     <>
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+      <div className='grid grid-cols-1 gap-4'>
         {fields.map((field) => (
-          <div key={field} className='col-span-1'>
+          <div key={field} className='relative'>
             <label className='block text-sm font-medium text-gray-700 mb-1 capitalize'>
               {field.replace(/([A-Z])/g, ' $1').trim()}
             </label>
@@ -38,96 +81,84 @@ export default function EducationalQualifications({
                 type={field === 'yearOfGraduation' ? 'number' : 'text'}
                 value={data[field] || ''}
                 onChange={(e) => onChange(field, e.target.value)}
-                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                disabled={!!initialData[field]}
+                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy disabled:bg-gray-100 disabled:cursor-not-allowed'
                 placeholder={`Enter ${field.replace(/([A-Z])/g, ' $1').trim()}`}
               />
-              {showIssueSelect[field] ? (
-                <div className='flex flex-col space-y-1'>
-                  <div className='flex justify-end'>
-                    <button
-                      onClick={() =>
-                        setShowIssueSelect({
-                          ...showIssueSelect,
-                          [field]: false,
-                        })
-                      }
-                      className='text-gray-500 hover:text-gray-700'
-                    >
-                      <svg
-                        className='w-4 h-4'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M6 18L18 6M6 6l12 12'
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  {possibleIssues.map((issue) => (
-                    <label key={issue} className='flex items-center space-x-1'>
-                      <input
-                        type='checkbox'
-                        checked={issues[field]?.includes(issue) || false}
-                        onChange={(e) => {
-                          const currentIssues = issues[field] || []
-                          const newIssues = e.target.checked
-                            ? [...currentIssues, issue]
-                            : currentIssues.filter((i) => i !== issue)
-                          setIssues({ ...issues, [field]: newIssues })
-                        }}
-                        className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
-                      />
-                      <span className='text-xs'>{issue}</span>
-                    </label>
-                  ))}
+              <div className='relative'>
+                <div className='flex items-center space-x-1'>
+                  <button
+                    onClick={() =>
+                      setShowIssueSelect({
+                        ...showIssueSelect,
+                        [field]: !showIssueSelect[field],
+                      })
+                    }
+                    className='text-gray-500 hover:text-gray-700'
+                  >
+                    {issues[field]?.length > 0 ? (
+                      <Warning className='w-5 h-5 text-red-500' />
+                    ) : (
+                      <MoreHoriz className='w-5 h-5' />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentField(field)
+                      setIsModalOpen(true)
+                    }}
+                    className='text-blue-500 hover:text-blue-700'
+                  >
+                    {assignedDocuments[field]?.length > 0 ? (
+                      <AttachFile className='w-5 h-5 text-green-500' />
+                    ) : (
+                      <UploadFile className='w-5 h-5' />
+                    )}
+                  </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() =>
-                    setShowIssueSelect({ ...showIssueSelect, [field]: true })
-                  }
-                  className={
-                    issues[field]?.length > 0
-                      ? 'text-red-500 hover:text-red-700'
-                      : 'text-green-500 hover:text-green-700'
-                  }
-                >
-                  {issues[field]?.length > 0 ? (
-                    <svg
-                      className='w-5 h-5'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M6 18L18 6M6 6l12 12'
+                {showIssueSelect[field] && (
+                  <div
+                    ref={dropdownRef}
+                    className='absolute right-0 top-full z-10 mt-2 w-72 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none'
+                  >
+                    <div className='p-2'>
+                      <input
+                        type='text'
+                        placeholder='Search issues...'
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
                       />
-                    </svg>
-                  ) : (
-                    <svg
-                      className='w-5 h-5'
-                      fill='currentColor'
-                      viewBox='0 0 20 20'
-                    >
-                      <path
-                        fillRule='evenodd'
-                        d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
-                        clipRule='evenodd'
-                      />
-                    </svg>
-                  )}
-                </button>
-              )}
+                    </div>
+                    <div className='max-h-48 overflow-y-auto p-2 light-scrollbar'>
+                      {filteredIssues.map((issue) => (
+                        <label
+                          key={issue}
+                          className='flex items-center space-x-2 p-1'
+                        >
+                          <input
+                            type='checkbox'
+                            checked={issues[field]?.includes(issue) || false}
+                            onChange={(e) => {
+                              const currentIssues = issues[field] || []
+                              const newIssues = e.target.checked
+                                ? [...currentIssues, issue]
+                                : currentIssues.filter((i) => i !== issue)
+                              setIssues({ ...issues, [field]: newIssues })
+                            }}
+                            className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
+                          />
+                          <span className='text-sm font-medium text-gray-700'>
+                            {issue}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            {issues[field] && issues[field].length > 0 && (
+            {issues[field]?.length > 0 && (
               <div className='mt-2 flex flex-wrap gap-1'>
                 {issues[field].map((issue) => (
                   <span
@@ -154,9 +185,47 @@ export default function EducationalQualifications({
                 ))}
               </div>
             )}
+            {assignedDocuments[field]?.length > 0 && (
+              <div className='mt-2 flex flex-wrap gap-1'>
+                {assignedDocuments[field].map((docId) => (
+                  <span
+                    key={docId}
+                    className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
+                  >
+                    Document {docId}
+                    <button
+                      onClick={() => {
+                        const newDocs = assignedDocuments[field].filter(
+                          (id) => id !== docId
+                        )
+                        setAssignedDocuments({
+                          ...assignedDocuments,
+                          [field]: newDocs,
+                        })
+                      }}
+                      className='ml-1 text-blue-600 hover:text-blue-800'
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
+      <DocumentsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        ippsId={ippsId}
+        field={currentField}
+        onAssign={(field, docs, append) =>
+          setAssignedDocuments((prev) => ({
+            ...prev,
+            [field]: append ? [...(prev[field] || []), ...docs] : docs,
+          }))
+        }
+      />
     </>
   )
 }

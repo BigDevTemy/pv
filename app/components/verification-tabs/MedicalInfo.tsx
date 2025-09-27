@@ -45,7 +45,8 @@ export default function MedicalInfo({
                 }
                 value={data[field] || ''}
                 onChange={(e) => onChange(field, e.target.value)}
-                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                disabled={!!data[field]}
+                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy disabled:bg-gray-100 disabled:cursor-not-allowed'
                 placeholder={`Enter ${field.replace(/([A-Z])/g, ' $1').trim()}`}
               />
               {showIssueSelect[field] ? (

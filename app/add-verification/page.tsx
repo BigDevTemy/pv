@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Alert from '../components/Alert'
 import api from '../components/Serverurls'
 import BasicInfo from '../components/verification-tabs/BasicInfo'
@@ -11,6 +11,14 @@ import PaymentSalaryRecord from '../components/verification-tabs/PaymentSalaryRe
 import IdentificationsBiometrics from '../components/verification-tabs/IdentificationsBiometrics'
 import Documents from '../components/verification-tabs/Documents'
 import NewEmployeeDocuments from '../components/verification-tabs/NewEmployeeDocuments'
+import Biometrics from '../components/biometrics/page'
+import pb from '@/lib/pb'
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import CheckCircle from '@mui/icons-material/CheckCircle'
+import Close from '@mui/icons-material/Close'
+import { Face, FaceOutlined } from '@mui/icons-material'
+import Logo1m from '../images/logo-me.png'
+import Image from 'next/image'
 // import MedicalInfo from '../components/verification-tabs/MedicalInfo'
 // import BankInfo from '../components/verification-tabs/BankInfo'
 // import EducationInfo from '../components/verification-tabs/EducationInfo'
@@ -21,23 +29,56 @@ interface Employee {
   name: string
   email: string
   department: string
+  lastName: string
+  dateOfBirth: string
+}
+
+interface OrgDep {
+  id: string
+  name: string
 }
 
 export default function AddVerification() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [ippsId, setIppsId] = useState('')
   const [employee, setEmployee] = useState<Employee | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
+  const [organisations, setOrganisations] = useState<OrgDep[]>([])
+  const [departments, setDepartments] = useState<OrgDep[]>([])
+  const [tags, setTags] = useState<OrgDep[]>([])
   const [exceptionData, setExceptionData] = useState({
     ippsId: '',
     firstName: '',
     lastName: '',
     dateOfBirth: '',
+    email: '',
+    phoneNumber: '',
     department: '',
+    organisation: '',
+    tags: [] as string[],
   })
+  const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('basic')
+  const [biometricVerified, setBiometricVerified] = useState(false)
+  const [verificationSuccess, setVerificationSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [biometricStep, setBiometricStep] = useState<
+    'facial' | 'surname' | 'dob'
+  >('facial')
+  const [skipIppsInput, setSkipIppsInput] = useState(false)
+  const [hasHandledIppsId, setHasHandledIppsId] = useState(false)
+  const [biometricResults, setBiometricResults] = useState({
+    facial: '',
+    surname: '',
+    dob: '',
+  })
+  const [surnameInput, setSurnameInput] = useState('')
+  const [surnameResult, setSurnameResult] = useState('')
+  const [dobInput, setDobInput] = useState('')
+  const [dobResult, setDobResult] = useState('')
   const [verificationData, setVerificationData] = useState({
     basic: {
       firstName: '',
@@ -54,16 +95,25 @@ export default function AddVerification() {
       nextOfKin: '',
       nextOfKinRelationship: '',
       profilePic: '',
+      photo: '',
     },
     employment: {
       dateOfFirstAppointment: '',
+      organisation: '',
+      refId: '',
       currentAppointment: '',
+      jobLocation: '',
+      jobTitle: '',
+      position: '',
+      taxState: '',
       designation: '',
       gradeLevel: '',
+      stepSum18: '',
       grade: '',
       mda: '',
       cdre: '',
       dateOfConfirmation: '',
+      dateOfHire: '',
       expectedRetirementDate: '',
       dateOfLastPromotion: '',
     },
@@ -108,9 +158,9 @@ export default function AddVerification() {
     },
     education: {
       degree: '',
-      institution: '',
+      educationInstitution: '',
       yearOfPassing: '',
-      grade: '',
+      finalGrade: '',
     },
   })
 
@@ -118,6 +168,9 @@ export default function AddVerification() {
     [key: string]: { [field: string]: string[] }
   }>({})
   const [showIssueSelect, setShowIssueSelect] = useState<{
+    [key: string]: { [field: string]: boolean }
+  }>({})
+  const [verify, setVerify] = useState<{
     [key: string]: { [field: string]: boolean }
   }>({})
 
@@ -137,7 +190,7 @@ export default function AddVerification() {
     { key: 'employment', label: 'Employment Details' },
     { key: 'educational', label: 'Educational Qualifications' },
     { key: 'payment', label: 'Payment/Salary Record' },
-    { key: 'identifications', label: 'Identifications/Biometrics' },
+    { key: 'identifications', label: 'Biometrics' },
     { key: 'documents', label: 'Documents' },
     { key: 'newDocuments', label: 'New Employee Documents' },
     // { key: 'medical', label: 'Medical Information' },
@@ -314,117 +367,1062 @@ export default function AddVerification() {
 
   // duplicate SAMPLE_EMPLOYEES removed
 
-  const handleCheck = async () => {
-    if (!ippsId.trim()) return
+  useEffect(() => {
+    const ippsIdParam = searchParams.get('ippsId')
+    if (!hasHandledIppsId && ippsIdParam && !employee) {
+      setHasHandledIppsId(true)
+      setIppsId(ippsIdParam)
+      setSkipIppsInput(true)
+      // Trigger handleCheck after setting ippsId
+      handleCheck(ippsIdParam)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    const fetchOrgDepTags = async () => {
+      try {
+        const orgs = await pb.collection('organisation').getFullList()
+        setOrganisations(orgs as unknown as OrgDep[])
+      } catch (error) {
+        console.error('Failed to fetch organisations:', error)
+      }
+      try {
+        const deps = await pb.collection('department').getFullList()
+        setDepartments(deps as unknown as OrgDep[])
+      } catch (error) {
+        console.error('Failed to fetch departments:', error)
+      }
+      try {
+        const tagList = await pb.collection('tags').getFullList()
+        setTags(tagList as unknown as OrgDep[])
+      } catch (error) {
+        console.error('Failed to fetch tags:', error)
+      }
+    }
+    fetchOrgDepTags()
+  }, [])
+
+  // const handleCheck = async (ippsParams = null) => {
+  //   if (!ippsParams && !ippsId.trim()) return
+
+  //   setLoading(true)
+  //   setError('')
+  //   let employees
+  //   try {
+  //     if (ippsParams) {
+  //       employees = await pb.collection('employees').getFullList({
+  //         filter: `ippsId = "${ippsParams}"`,
+  //       })
+  //     } else {
+  //       employees = await pb.collection('employees').getFullList({
+  //         filter: `ippsId = "${ippsId}"`,
+  //       })
+  //     }
+
+  //     console.log(employees, ippsId, ippsParams)
+
+  //     if (employees.length > 0) {
+  //       const emp = employees[0]
+  //       console.log('emp', emp)
+  //       const empData: Employee = {
+  //         id: emp.id,
+  //         ippsId: emp.ippsId,
+  //         name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+  //         email: emp.email || '',
+  //         department: emp.mda || '',
+  //         lastName: emp.lastName || '',
+  //         dateOfBirth: emp.dob || '',
+  //       }
+  //       setEmployee(empData)
+
+  //       let ippsId
+
+  //       if (ippsId) {
+  //         ippsId = ippsId
+  //       } else {
+  //         ippsId = ippsParams
+  //       }
+
+  //       // Check for existing incomplete verification
+  //       const existingVerifications = await pb
+  //         .collection('verifications')
+  //         .getFullList({
+  //           filter: `ippsId = "${ippsId}"`,
+  //         })
+  //       const existing = existingVerifications.find(
+  //         (v) => v.status === 'pending'
+  //       )
+  //       if (existing) {
+  //         // Load existing data
+  //         setVerificationData(
+  //           existing.rawVerificationData || {
+  //             basic: {
+  //               firstName: emp.firstName || '',
+  //               lastName: (emp.lastName || '').trim(),
+  //               dateOfBirth: emp.dob || '',
+  //               gender: emp.gender || '',
+  //               maritalStatus: emp.maritalStatus || '',
+  //               nationality: emp.nationality || '',
+  //               stateOfOrigin: emp.state_of_origin || '',
+  //               lga: emp.lga || '',
+  //               phoneNumber: emp.phone || '',
+  //               email: emp.email || '',
+  //               residentialAddress: emp.residentialAddress || '',
+  //               nextOfKin: emp.nextOfKin || '',
+  //               nextOfKinRelationship: emp.nextOfKinRelationship || '',
+  //               profilePic:
+  //                 emp.profilePic ||
+  //                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
+  //               photo: emp.photo || '',
+  //             },
+  //             employment: {
+  //               dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
+  //               organisation: emp.organisation || '',
+  //               refId: emp.ref_id || '',
+  //               currentAppointment: emp.currentAppointment || '',
+  //               jobLocation: emp.joblocation || '',
+  //               jobTitle: emp.jobtitle || '',
+  //               position: emp.position || '',
+  //               taxState: emp.taxstate || '',
+  //               designation: emp.designation || '',
+  //               gradeLevel: emp.gradeLevel || '',
+  //               stepSum18: emp.sum_step18 || '',
+  //               grade: emp.grade || '',
+  //               mda: emp.mda || '',
+  //               cdre: emp.cdre || '',
+  //               dateOfConfirmation: emp.confirmationDate || '',
+  //               dateOfHire: emp.hireDate || '',
+  //               expectedRetirementDate: emp.expectedRetirementDate || '',
+  //               dateOfLastPromotion: emp.dateOfLastPromotion || '',
+  //             },
+  //             educational: {
+  //               highestQualification: emp.highestQualification || '',
+  //               institutionAttended: emp.institutionAttended || '',
+  //               yearOfGraduation: emp.yearOfGraduation || '',
+  //               professionalCertifications:
+  //                 emp.professionalCertifications || '',
+  //               trainingAttended: emp.trainingAttended || '',
+  //             },
+  //             payment: {
+  //               salaryStructure: emp.salaryStructure || '',
+  //               basicSalary: emp.basicSalary || '',
+  //               allowances: emp.allowances || '',
+  //               deductions: emp.deductions || '',
+  //               netPay: emp.netPay || '',
+  //               accountNumber: emp.accountNumber || '',
+  //               bvn: emp.bvn || '',
+  //               pfaName: emp.pfaName || '',
+  //               rsaPin: emp.rsaPin || '',
+  //               nhisNumber: emp.nhisNumber || '',
+  //             },
+  //             identifications: {
+  //               bvn: emp.bvn || '',
+  //               passportPhotograph: emp.passportPhotograph || '',
+  //               fingerprints: emp.fingerprints || '',
+  //               digitalSignatures: emp.digitalSignatures || '',
+  //             },
+  //             documents: emp.documents || {},
+  //             newDocuments: emp.newDocuments || {},
+  //             medical: {
+  //               bloodType: emp.bloodType || '',
+  //               allergies: emp.allergies || '',
+  //               emergencyContact: emp.emergencyContact || '',
+  //               medicalHistory: emp.medicalHistory || '',
+  //             },
+  //             bank: {
+  //               accountNumber: emp.accountNumber || '',
+  //               bankName: emp.bankName || '',
+  //               branch: emp.branch || '',
+  //               ifscCode: emp.ifscCode || '',
+  //             },
+  //             education: {
+  //               degree: emp.degree || '',
+  //               educationInstitution: emp.educationInstitution || '',
+  //               yearOfPassing: emp.yearOfPassing || '',
+  //               finalGrade: emp.finalGrade || '',
+  //             },
+  //           }
+  //         )
+  //         setIssues(existing.issues || {})
+  //         setVerify(existing.verify || {})
+  //         setActiveTab(existing.lastTab || 'basic')
+  //         setBiometricVerified(true)
+  //         setBiometricStep(existing.biometricStep || 'facial')
+  //         setBiometricResults(
+  //           existing.biometricResults || {
+  //             facial: '',
+  //             surname: '',
+  //             dob: '',
+  //           }
+  //         )
+  //         setSurnameInput(existing.surnameInput || '')
+  //         setSurnameResult(existing.surnameResult || '')
+  //         setDobInput(existing.dobInput || '')
+  //         setDobResult(existing.dobResult || '')
+  //       } else {
+  //         // New verification, load employee data
+  //         setVerificationData({
+  //           basic: {
+  //             firstName: emp.firstName || '',
+  //             lastName: (emp.lastName || '').trim(),
+  //             dateOfBirth: emp.dob || '',
+  //             gender: emp.gender || '',
+  //             maritalStatus: emp.maritalStatus || '',
+  //             nationality: emp.nationality || '',
+  //             stateOfOrigin: emp.state_of_origin || '',
+  //             lga: emp.lga || '',
+  //             phoneNumber: emp.phone || '',
+  //             email: emp.email || '',
+  //             residentialAddress: emp.residentialAddress || '',
+  //             nextOfKin: emp.nextOfKin || '',
+  //             nextOfKinRelationship: emp.nextOfKinRelationship || '',
+  //             profilePic:
+  //               emp.profilePic ||
+  //               `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
+  //             photo: emp.photo || '',
+  //           },
+  //           employment: {
+  //             dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
+  //             organisation: emp.organisation || '',
+  //             refId: emp.ref_id || '',
+  //             currentAppointment: emp.currentAppointment || '',
+  //             jobLocation: emp.joblocation || '',
+  //             jobTitle: emp.jobtitle || '',
+  //             position: emp.position || '',
+  //             taxState: emp.taxstate || '',
+  //             designation: emp.designation || '',
+  //             gradeLevel: emp.gradeLevel || '',
+  //             stepSum18: emp.sum_step18 || '',
+  //             grade: emp.grade || '',
+  //             mda: emp.mda || '',
+  //             cdre: emp.cdre || '',
+  //             dateOfConfirmation: emp.confirmationDate || '',
+  //             dateOfHire: emp.hireDate || '',
+  //             expectedRetirementDate: emp.expectedRetirementDate || '',
+  //             dateOfLastPromotion: emp.dateOfLastPromotion || '',
+  //           },
+  //           educational: {
+  //             highestQualification: emp.highestQualification || '',
+  //             institutionAttended: emp.institutionAttended || '',
+  //             yearOfGraduation: emp.yearOfGraduation || '',
+  //             professionalCertifications: emp.professionalCertifications || '',
+  //             trainingAttended: emp.trainingAttended || '',
+  //           },
+  //           payment: {
+  //             salaryStructure: emp.salaryStructure || '',
+  //             basicSalary: emp.basicSalary || '',
+  //             allowances: emp.allowances || '',
+  //             deductions: emp.deductions || '',
+  //             netPay: emp.netPay || '',
+  //             accountNumber: emp.accountNumber || '',
+  //             bvn: emp.bvn || '',
+  //             pfaName: emp.pfaName || '',
+  //             rsaPin: emp.rsaPin || '',
+  //             nhisNumber: emp.nhisNumber || '',
+  //           },
+  //           identifications: {
+  //             bvn: emp.bvn || '',
+  //             passportPhotograph: emp.passportPhotograph || '',
+  //             fingerprints: emp.fingerprints || '',
+  //             digitalSignatures: emp.digitalSignatures || '',
+  //           },
+  //           documents: emp.documents || {},
+  //           newDocuments: emp.newDocuments || {},
+  //           medical: {
+  //             bloodType: emp.bloodType || '',
+  //             allergies: emp.allergies || '',
+  //             emergencyContact: emp.emergencyContact || '',
+  //             medicalHistory: emp.medicalHistory || '',
+  //           },
+  //           bank: {
+  //             accountNumber: emp.accountNumber || '',
+  //             bankName: emp.bankName || '',
+  //             branch: emp.branch || '',
+  //             ifscCode: emp.ifscCode || '',
+  //           },
+  //           education: {
+  //             degree: emp.degree || '',
+  //             educationInstitution: emp.educationInstitution || '',
+  //             yearOfPassing: emp.yearOfPassing || '',
+  //             finalGrade: emp.finalGrade || '',
+  //           },
+  //         })
+  //         setBiometricVerified(false)
+  //       }
+  //     } else {
+  //       setError('Employee not found. You can add an exception.')
+  //       setSkipIppsInput(false)
+  //     }
+  //   } catch (err) {
+  //     console.error('Failed to check employee:', err)
+  //     setError('Failed to check employee. Please try again.')
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
+
+  const handleCheck = async (ippsParams: string | null = null) => {
+    // choose the ippsId to use
+    const idToCheck = ippsParams || ippsId?.trim()
+    if (!idToCheck) return
+
     setLoading(true)
     setError('')
     try {
-      // Use local samples first for quick UI testing
-      const hasSample = Object.prototype.hasOwnProperty.call(
-        SAMPLE_EMPLOYEES,
-        ippsId
-      )
-      if (hasSample) {
-        const sample = SAMPLE_EMPLOYEES[ippsId as keyof typeof SAMPLE_EMPLOYEES]
-        const empName =
-          sample.meta?.name ??
-          `${sample.basic?.firstName ?? ''} ${
-            sample.basic?.lastName ?? ''
-          }`.trim()
-        const empEmail = sample.meta?.email ?? sample.basic?.email ?? ''
-        const emp: Employee = {
-          id: sample.meta?.id ?? `sample-${ippsId}`,
-          ippsId,
-          name: empName,
-          email: empEmail,
-          department: sample.meta?.department ?? sample.employment?.mda ?? '',
-        }
-        setEmployee(emp)
-        setVerificationData((prev) => ({
-          ...prev,
-          basic: {
-            ...prev.basic,
-            ...(sample.basic ?? {}),
-            profilePic:
-              sample.basic?.profilePic && sample.basic.profilePic !== ''
-                ? sample.basic.profilePic
-                : `https://api.dicebear.com/7.x/avataaars/svg?seed=${empEmail}`,
-          },
-          employment: { ...prev.employment, ...(sample.employment ?? {}) },
-          educational: { ...prev.educational, ...(sample.educational ?? {}) },
-          payment: { ...prev.payment, ...(sample.payment ?? {}) },
-          identifications: {
-            ...prev.identifications,
-            ...(sample.identifications ?? {}),
-          },
-          documents: { ...prev.documents, ...(sample.documents ?? {}) },
-          newDocuments: {
-            ...prev.newDocuments,
-            ...(sample.newDocuments ?? {}),
-          },
-          medical: { ...prev.medical, ...(sample.medical ?? {}) },
-          bank: { ...prev.bank, ...(sample.bank ?? {}) },
-          education: { ...prev.education, ...(sample.education ?? {}) },
-        }))
-      } else {
-        // Fallback to PocketBase lookup
-        const response = await api.get(
-          `/collections/employees/records?filter=ippsId='${ippsId}'`
+      // get employee by ippsId
+      const employees = await pb.collection('employees').getFullList({
+        filter: `ippsId = "${idToCheck}"`,
+      })
+
+      console.log(employees, ippsId, ippsParams)
+
+      if (employees.length > 0) {
+        const emp = employees[0]
+        console.log('emp', emp)
+
+        // Check for existing verifications first
+        const existingVerifications = await pb
+          .collection('verifications')
+          .getFullList({
+            filter: `ippsId = "${idToCheck}"`,
+          })
+
+        // Check if already completed
+        const completedVerification = existingVerifications.find(
+          (v) => v.status === 'complete'
         )
-        if (response.data.items.length > 0) {
-          const emp = response.data.items[0]
-          setEmployee(emp)
-          const [firstName = '', ...rest] = (emp.name || '').split(' ')
-          const lastName = rest.join(' ')
-          setVerificationData((prev) => ({
-            ...prev,
-            basic: {
-              ...prev.basic,
-              firstName,
-              lastName,
-              email: emp.email,
-              profilePic:
-                emp.avatar ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
-            },
-          }))
-        } else {
-          setError('Employee not found. You can add an exception.')
+
+        if (completedVerification) {
+          setError('This IPPS ID has already been verified and completed.')
+          setSkipIppsInput(false)
+          setLoading(false)
+          return
         }
+
+        const empData: Employee = {
+          id: emp.id,
+          ippsId: emp.ippsId,
+          name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+          email: emp.email || '',
+          department: emp.mda || '',
+          lastName: emp.lastName || '',
+          dateOfBirth: emp.dob || '',
+        }
+        setEmployee(empData)
+
+        const existing = existingVerifications.find(
+          (v) => v.status === 'pending'
+        )
+
+        if (existing) {
+          // Load existing data
+          setVerificationData(
+            existing.rawVerificationData || {
+              basic: {
+                firstName: emp.firstName || '',
+                lastName: (emp.lastName || '').trim(),
+                dateOfBirth: emp.dob || '',
+                gender: emp.gender || '',
+                maritalStatus: emp.maritalStatus || '',
+                nationality: emp.nationality || '',
+                stateOfOrigin: emp.state_of_origin || '',
+                lga: emp.lga || '',
+                phoneNumber: emp.phone || '',
+                email: emp.email || '',
+                residentialAddress: emp.residentialAddress || '',
+                nextOfKin: emp.nextOfKin || '',
+                nextOfKinRelationship: emp.nextOfKinRelationship || '',
+                profilePic:
+                  emp.profilePic ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
+                photo: emp.photo || '',
+              },
+              employment: {
+                dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
+                organisation: emp.organisation || '',
+                refId: emp.ref_id || '',
+                currentAppointment: emp.currentAppointment || '',
+                jobLocation: emp.joblocation || '',
+                jobTitle: emp.jobtitle || '',
+                position: emp.position || '',
+                taxState: emp.taxstate || '',
+                designation: emp.designation || '',
+                gradeLevel: emp.gradeLevel || '',
+                stepSum18: emp.sum_step18 || '',
+                grade: emp.grade || '',
+                mda: emp.mda || '',
+                cdre: emp.cdre || '',
+                dateOfConfirmation: emp.confirmationDate || '',
+                dateOfHire: emp.hireDate || '',
+                expectedRetirementDate: emp.expectedRetirementDate || '',
+                dateOfLastPromotion: emp.dateOfLastPromotion || '',
+              },
+              educational: {
+                highestQualification: emp.highestQualification || '',
+                institutionAttended: emp.institutionAttended || '',
+                yearOfGraduation: emp.yearOfGraduation || '',
+                professionalCertifications:
+                  emp.professionalCertifications || '',
+                trainingAttended: emp.trainingAttended || '',
+              },
+              payment: {
+                salaryStructure: emp.salaryStructure || '',
+                basicSalary: emp.basicSalary || '',
+                allowances: emp.allowances || '',
+                deductions: emp.deductions || '',
+                netPay: emp.netPay || '',
+                accountNumber: emp.accountNumber || '',
+                bvn: emp.bvn || '',
+                pfaName: emp.pfaName || '',
+                rsaPin: emp.rsaPin || '',
+                nhisNumber: emp.nhisNumber || '',
+              },
+              identifications: {
+                bvn: emp.bvn || '',
+                passportPhotograph: emp.passportPhotograph || '',
+                fingerprints: emp.fingerprints || '',
+                digitalSignatures: emp.digitalSignatures || '',
+              },
+              documents: emp.documents || {},
+              newDocuments: emp.newDocuments || {},
+              medical: {
+                bloodType: emp.bloodType || '',
+                allergies: emp.allergies || '',
+                emergencyContact: emp.emergencyContact || '',
+                medicalHistory: emp.medicalHistory || '',
+              },
+              bank: {
+                accountNumber: emp.accountNumber || '',
+                bankName: emp.bankName || '',
+                branch: emp.branch || '',
+                ifscCode: emp.ifscCode || '',
+              },
+              education: {
+                degree: emp.degree || '',
+                educationInstitution: emp.educationInstitution || '',
+                yearOfPassing: emp.yearOfPassing || '',
+                finalGrade: emp.finalGrade || '',
+              },
+            }
+          )
+          setIssues(existing.issues || {})
+          setVerify(existing.verify || {})
+          setActiveTab(existing.lastTab || 'basic')
+          setBiometricVerified(false)
+          setBiometricStep(existing.biometricStep || 'facial')
+          setBiometricResults(
+            existing.biometricResults || {
+              facial: '',
+              surname: '',
+              dob: '',
+            }
+          )
+          setSurnameInput(existing.surnameInput || '')
+          setSurnameResult(existing.surnameResult || '')
+          setDobInput(existing.dobInput || '')
+          setDobResult(existing.dobResult || '')
+        } else {
+          // New verification, load employee data
+          setVerificationData({
+            basic: {
+              firstName: emp.firstName || '',
+              lastName: (emp.lastName || '').trim(),
+              dateOfBirth: emp.dob || '',
+              gender: emp.gender || '',
+              maritalStatus: emp.maritalStatus || '',
+              nationality: emp.nationality || '',
+              stateOfOrigin: emp.state_of_origin || '',
+              lga: emp.lga || '',
+              phoneNumber: emp.phone || '',
+              email: emp.email || '',
+              residentialAddress: emp.residentialAddress || '',
+              nextOfKin: emp.nextOfKin || '',
+              nextOfKinRelationship: emp.nextOfKinRelationship || '',
+              profilePic:
+                emp.profilePic ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
+              photo: emp.photo || '',
+            },
+            employment: {
+              dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
+              organisation: emp.organisation || '',
+              refId: emp.ref_id || '',
+              currentAppointment: emp.currentAppointment || '',
+              jobLocation: emp.joblocation || '',
+              jobTitle: emp.jobtitle || '',
+              position: emp.position || '',
+              taxState: emp.taxstate || '',
+              designation: emp.designation || '',
+              gradeLevel: emp.gradeLevel || '',
+              stepSum18: emp.sum_step18 || '',
+              grade: emp.grade || '',
+              mda: emp.mda || '',
+              cdre: emp.cdre || '',
+              dateOfConfirmation: emp.confirmationDate || '',
+              dateOfHire: emp.hireDate || '',
+              expectedRetirementDate: emp.expectedRetirementDate || '',
+              dateOfLastPromotion: emp.dateOfLastPromotion || '',
+            },
+            educational: {
+              highestQualification: emp.highestQualification || '',
+              institutionAttended: emp.institutionAttended || '',
+              yearOfGraduation: emp.yearOfGraduation || '',
+              professionalCertifications: emp.professionalCertifications || '',
+              trainingAttended: emp.trainingAttended || '',
+            },
+            payment: {
+              salaryStructure: emp.salaryStructure || '',
+              basicSalary: emp.basicSalary || '',
+              allowances: emp.allowances || '',
+              deductions: emp.deductions || '',
+              netPay: emp.netPay || '',
+              accountNumber: emp.accountNumber || '',
+              bvn: emp.bvn || '',
+              pfaName: emp.pfaName || '',
+              rsaPin: emp.rsaPin || '',
+              nhisNumber: emp.nhisNumber || '',
+            },
+            identifications: {
+              bvn: emp.bvn || '',
+              passportPhotograph: emp.passportPhotograph || '',
+              fingerprints: emp.fingerprints || '',
+              digitalSignatures: emp.digitalSignatures || '',
+            },
+            documents: emp.documents || {},
+            newDocuments: emp.newDocuments || {},
+            medical: {
+              bloodType: emp.bloodType || '',
+              allergies: emp.allergies || '',
+              emergencyContact: emp.emergencyContact || '',
+              medicalHistory: emp.medicalHistory || '',
+            },
+            bank: {
+              accountNumber: emp.accountNumber || '',
+              bankName: emp.bankName || '',
+              branch: emp.branch || '',
+              ifscCode: emp.ifscCode || '',
+            },
+            education: {
+              degree: emp.degree || '',
+              educationInstitution: emp.educationInstitution || '',
+              yearOfPassing: emp.yearOfPassing || '',
+              finalGrade: emp.finalGrade || '',
+            },
+          })
+          setBiometricVerified(false)
+        }
+      } else {
+        setError('Employee not found. You can add an exception.')
+        setSkipIppsInput(false)
       }
-    } catch {
-      setError('Failed to check employee. Please try again.')
+    } catch (err) {
+      console.error('Failed to check employee:', err)
+      //setError('Failed to check employee. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   const handleAddException = async () => {
-    // Simulate adding exception
-    alert('Exception added successfully!')
-    setShowDrawer(false)
-    setExceptionData({
-      ippsId: '',
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
-      department: '',
-    })
+    try {
+      // Get current user ID
+      const currentUserStr = localStorage.getItem('currentUser')
+      let submittedBy = 'current_user'
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr)
+        console.log('currentUser', currentUser)
+        const users = await pb.collection('users').getFullList({
+          filter: `email = "${currentUser.email}"`,
+        })
+        console.log(users)
+        if (users.length > 0) {
+          submittedBy = users[0].user_id
+        }
+      }
+
+      const payload = {
+        firstName: exceptionData.firstName,
+        lastName: exceptionData.lastName,
+        dateOfBirth: exceptionData.dateOfBirth,
+        email: exceptionData.email,
+        phoneNumber: exceptionData.phoneNumber,
+        department: exceptionData.department,
+        organisation: exceptionData.organisation,
+        tags: exceptionData.tags,
+        submittedAt: new Date().toISOString(),
+        submittedBy,
+      }
+      await pb.collection('exception_logs').create(payload)
+      setSuccessMessage('Exception added successfully!')
+      setTimeout(() => {
+        setSuccessMessage('')
+        setShowDrawer(false)
+        setExceptionData({
+          ippsId: '',
+          firstName: '',
+          lastName: '',
+          dateOfBirth: '',
+          email: '',
+          phoneNumber: '',
+          department: '',
+          organisation: '',
+          tags: [],
+        })
+        setSearchTerm('')
+      }, 2500)
+    } catch (error) {
+      console.error('Failed to add exception:', error)
+      setError('Failed to add exception. Please try again.')
+    }
   }
 
   const handleVerificationSubmit = async () => {
-    // eslint-disable-next-line no-console
-    console.log('Verification payload:', {
-      ippsId,
-      employee,
-      verificationData,
-      issues,
-      submittedAt: new Date().toISOString(),
-    })
-    setEmployee(null)
-    alert('Verification submitted successfully!')
+    if (!employee || !ippsId) return
 
-    //router.push('/dashboard')
+    try {
+      // Transform data into the required format
+      const transformedData = {
+        'basic-info': transformTabData(
+          'basic',
+          verificationData.basic,
+          issues.basic || {},
+          verify.basic || {}
+        ),
+        'employment-details': transformTabData(
+          'employment',
+          verificationData.employment,
+          issues.employment || {},
+          verify.employment || {}
+        ),
+        'educational-qualifications': transformTabData(
+          'educational',
+          verificationData.educational,
+          issues.educational || {},
+          verify.educational || {}
+        ),
+        'payment-salary-record': transformTabData(
+          'payment',
+          verificationData.payment,
+          issues.payment || {},
+          verify.payment || {}
+        ),
+        'identifications-biometrics': transformTabData(
+          'identifications',
+          verificationData.identifications,
+          issues.identifications || {},
+          verify.identifications || {}
+        ),
+        documents: transformTabData(
+          'documents',
+          verificationData.documents,
+          issues.documents || {},
+          verify.documents || {}
+        ),
+        'new-documents': transformTabData(
+          'newDocuments',
+          verificationData.newDocuments,
+          issues.newDocuments || {},
+          verify.newDocuments || {}
+        ),
+      }
+
+      // Get current user ID
+      const currentUserStr = localStorage.getItem('currentUser')
+      let submittedBy = 'current_user'
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr)
+        const users = await pb.collection('users').getFullList({
+          filter: `email = "${currentUser.email}"`,
+        })
+
+        console.log('currentUser', users)
+        if (users.length > 0) {
+          submittedBy = users[0].user_id
+        }
+      }
+
+      const payload = {
+        ippsId,
+        employeeRef: employee.id,
+        verificationData: transformedData,
+        rawVerificationData: verificationData,
+        biometricResults,
+        biometricVerified,
+        biometricStep,
+        surnameInput,
+        surnameResult,
+        dobInput,
+        dobResult,
+        issues,
+        verify,
+        lastTab: activeTab,
+        status: 'complete', // Changed to complete
+        cc_id: 1,
+        submittedAt: new Date().toISOString(),
+        submittedBy,
+        verify_by: 1, // You might want to set this appropriately
+      }
+
+      // Check if verification already exists
+      const existingVerifications = await pb
+        .collection('verifications')
+        .getFullList({
+          filter: `ippsId = "${ippsId}"`,
+        })
+
+      if (existingVerifications.length > 0) {
+        // Update existing
+        await pb
+          .collection('verifications')
+          .update(existingVerifications[0].id, payload)
+      } else {
+        // Create new
+        await pb.collection('verifications').create(payload)
+      }
+
+      alert('Verification completed successfully!')
+
+      // Reset form and navigate to dashboard
+      setEmployee(null)
+      setIppsId('')
+      setSkipIppsInput(false)
+      setHasHandledIppsId(false)
+      // Remove ippsId from URL if present
+      if (searchParams.get('ippsId')) {
+        router.replace('/add-verification')
+      }
+      setVerificationData({
+        basic: {
+          firstName: '',
+          lastName: '',
+          dateOfBirth: '',
+          gender: '',
+          maritalStatus: '',
+          nationality: '',
+          stateOfOrigin: '',
+          lga: '',
+          phoneNumber: '',
+          email: '',
+          residentialAddress: '',
+          nextOfKin: '',
+          nextOfKinRelationship: '',
+          profilePic: '',
+          photo: '',
+        },
+        employment: {
+          dateOfFirstAppointment: '',
+          organisation: '',
+          refId: '',
+          currentAppointment: '',
+          jobLocation: '',
+          jobTitle: '',
+          position: '',
+          taxState: '',
+          designation: '',
+          gradeLevel: '',
+          stepSum18: '',
+          grade: '',
+          mda: '',
+          cdre: '',
+          dateOfConfirmation: '',
+          dateOfHire: '',
+          expectedRetirementDate: '',
+          dateOfLastPromotion: '',
+        },
+        educational: {
+          highestQualification: '',
+          institutionAttended: '',
+          yearOfGraduation: '',
+          professionalCertifications: '',
+          trainingAttended: '',
+        },
+        payment: {
+          salaryStructure: '',
+          basicSalary: '',
+          allowances: '',
+          deductions: '',
+          netPay: '',
+          accountNumber: '',
+          bvn: '',
+          pfaName: '',
+          rsaPin: '',
+          nhisNumber: '',
+        },
+        identifications: {
+          bvn: '',
+          passportPhotograph: '',
+          fingerprints: '',
+          digitalSignatures: '',
+        },
+        documents: {},
+        newDocuments: {},
+        medical: {
+          bloodType: '',
+          allergies: '',
+          emergencyContact: '',
+          medicalHistory: '',
+        },
+        bank: {
+          accountNumber: '',
+          bankName: '',
+          branch: '',
+          ifscCode: '',
+        },
+        education: {
+          degree: '',
+          educationInstitution: '',
+          yearOfPassing: '',
+          finalGrade: '',
+        },
+      })
+      setIssues({})
+      setShowIssueSelect({})
+      setVerify({})
+      setActiveTab('basic')
+      setBiometricVerified(false)
+
+      // Navigate to dashboard
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Failed to submit verification:', error)
+      alert('Failed to submit verification. Please try again.')
+    }
+  }
+
+  const handleSaveProgress = async () => {
+    if (!employee || !ippsId) return
+
+    try {
+      // Transform data into the required format
+      const transformedData = {
+        'basic-info': transformTabData(
+          'basic',
+          verificationData.basic,
+          issues.basic || {},
+          verify.basic || {}
+        ),
+        'employment-details': transformTabData(
+          'employment',
+          verificationData.employment,
+          issues.employment || {},
+          verify.employment || {}
+        ),
+        'educational-qualifications': transformTabData(
+          'educational',
+          verificationData.educational,
+          issues.educational || {},
+          verify.educational || {}
+        ),
+        'payment-salary-record': transformTabData(
+          'payment',
+          verificationData.payment,
+          issues.payment || {},
+          verify.payment || {}
+        ),
+        'identifications-biometrics': transformTabData(
+          'identifications',
+          verificationData.identifications,
+          issues.identifications || {},
+          verify.identifications || {}
+        ),
+        documents: transformTabData(
+          'documents',
+          verificationData.documents,
+          issues.documents || {},
+          verify.documents || {}
+        ),
+        'new-documents': transformTabData(
+          'newDocuments',
+          verificationData.newDocuments,
+          issues.newDocuments || {},
+          verify.newDocuments || {}
+        ),
+      }
+
+      // Get current user ID
+      const currentUserStr = localStorage.getItem('currentUser')
+      let submittedBy = 'current_user'
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr)
+        const users = await pb.collection('users').getFullList({
+          filter: `email = "${currentUser.email}"`,
+        })
+
+        console.log('currentUser', users)
+        if (users.length > 0) {
+          submittedBy = users[0].user_id
+        }
+      }
+
+      const payload = {
+        ippsId,
+        employeeRef: employee.id,
+        verificationData: transformedData,
+        rawVerificationData: verificationData,
+        biometricResults,
+        biometricVerified,
+        biometricStep,
+        surnameInput,
+        surnameResult,
+        dobInput,
+        dobResult,
+        issues,
+        verify,
+        lastTab: activeTab,
+        status: 'pending',
+        cc_id: 1,
+        submittedAt: new Date().toISOString(),
+        submittedBy,
+        verify_by: 1, // You might want to set this appropriately
+      }
+
+      // Check if verification already exists
+      const existingVerifications = await pb
+        .collection('verifications')
+        .getFullList({
+          filter: `ippsId = "${ippsId}"`,
+        })
+
+      if (existingVerifications.length > 0) {
+        // Update existing
+        await pb
+          .collection('verifications')
+          .update(existingVerifications[0].id, payload)
+      } else {
+        // Create new
+        await pb.collection('verifications').create(payload)
+      }
+
+      alert('Progress saved successfully!')
+
+      // Reset form to allow entering new IPPS ID
+      setEmployee(null)
+      setIppsId('')
+      setSkipIppsInput(false)
+      setHasHandledIppsId(false)
+      // Remove ippsId from URL if present
+      if (searchParams.get('ippsId')) {
+        router.replace('/add-verification')
+      }
+      setVerificationData({
+        basic: {
+          firstName: '',
+          lastName: '',
+          dateOfBirth: '',
+          gender: '',
+          maritalStatus: '',
+          nationality: '',
+          stateOfOrigin: '',
+          lga: '',
+          phoneNumber: '',
+          email: '',
+          residentialAddress: '',
+          nextOfKin: '',
+          nextOfKinRelationship: '',
+          profilePic: '',
+          photo: '',
+        },
+        employment: {
+          dateOfFirstAppointment: '',
+          organisation: '',
+          refId: '',
+          currentAppointment: '',
+          jobLocation: '',
+          jobTitle: '',
+          position: '',
+          taxState: '',
+          designation: '',
+          gradeLevel: '',
+          stepSum18: '',
+          grade: '',
+          mda: '',
+          cdre: '',
+          dateOfConfirmation: '',
+          dateOfHire: '',
+          expectedRetirementDate: '',
+          dateOfLastPromotion: '',
+        },
+        educational: {
+          highestQualification: '',
+          institutionAttended: '',
+          yearOfGraduation: '',
+          professionalCertifications: '',
+          trainingAttended: '',
+        },
+        payment: {
+          salaryStructure: '',
+          basicSalary: '',
+          allowances: '',
+          deductions: '',
+          netPay: '',
+          accountNumber: '',
+          bvn: '',
+          pfaName: '',
+          rsaPin: '',
+          nhisNumber: '',
+        },
+        identifications: {
+          bvn: '',
+          passportPhotograph: '',
+          fingerprints: '',
+          digitalSignatures: '',
+        },
+        documents: {},
+        newDocuments: {},
+        medical: {
+          bloodType: '',
+          allergies: '',
+          emergencyContact: '',
+          medicalHistory: '',
+        },
+        bank: {
+          accountNumber: '',
+          bankName: '',
+          branch: '',
+          ifscCode: '',
+        },
+        education: {
+          degree: '',
+          educationInstitution: '',
+          yearOfPassing: '',
+          finalGrade: '',
+        },
+      })
+      setIssues({})
+      setShowIssueSelect({})
+      setVerify({})
+      setActiveTab('basic')
+      setBiometricVerified(false)
+    } catch (error) {
+      console.error('Failed to save progress:', error)
+      alert('Failed to save progress. Please try again.')
+      // Reset employee state on error
+    }
+  }
+
+  const transformTabData = (
+    tabKey: string,
+    tabData: Record<string, string>,
+    tabIssues: Record<string, string[]>,
+    tabVerify: Record<string, boolean>
+  ) => {
+    const result: Record<
+      string,
+      { verify: number; tags: string[]; document_proof: string[] }
+    > = {}
+
+    Object.keys(tabData).forEach((field) => {
+      const fieldIssues = tabIssues[field] || []
+      const fieldVerify = tabVerify[field] ? 1 : 0
+
+      result[field] = {
+        verify: fieldVerify,
+        tags: fieldIssues,
+        document_proof: [], // This would need to be populated from assignedDocuments if available
+      }
+    })
+
+    return result
   }
 
   // const handleNext = () => {
@@ -475,13 +1473,13 @@ export default function AddVerification() {
     return (
       <div className='flex'>
         {/* Vertical Tabs */}
-        <div className='w-1/4 pr-4'>
+        <div className='w-1/3 pr-4'>
           <div className='space-y-2'>
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium ${
+                className={`w-full text-left px-2 py-2 rounded-lg font-medium ${
                   activeTab === tab.key
                     ? 'bg-primaryy text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -494,7 +1492,7 @@ export default function AddVerification() {
         </div>
 
         {/* Form Fields */}
-        <div className='w-3/4'>
+        <div className='w-3/4 ml-4'>
           {activeTab === 'basic' && verificationData.basic.profilePic && (
             <div className='text-center mb-6'>
               <img
@@ -555,7 +1553,7 @@ export default function AddVerification() {
           </div>
 
           {/* Navigation Buttons */}
-          <div className='flex justify-between mt-6'>
+          <div className='w-full flex justify-between mt-6'>
             <button
               onClick={() => {
                 const currentIndex = tabs.findIndex(
@@ -576,6 +1574,13 @@ export default function AddVerification() {
             >
               {isLastTab ? 'Submit Verification' : 'Next'}
             </button>
+            <button
+              onClick={() => handleSaveProgress()}
+              className='px-6 py-2 text-white rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-opacity duration-200'
+              style={{ backgroundColor: '#ffc107' }}
+            >
+              Save Progress
+            </button>
           </div>
         </div>
       </div>
@@ -584,35 +1589,34 @@ export default function AddVerification() {
 
   return (
     <div className='min-h-screen bg-gray-50 p-4 md:p-8'>
-      <div className='max-w-4xl mx-auto'>
+      <div className='max-w-4xl mx-auto '>
         {/* Back Button */}
-        <button
-          onClick={() => router.push('/dashboard')}
-          className='mb-6 flex items-center text-primaryy hover:text-primaryx'
-        >
-          <svg
-            className='w-5 h-5 mr-2'
-            fill='none'
-            stroke='currentColor'
-            viewBox='0 0 24 24'
-          >
-            <path
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth={2}
-              d='M15 19l-7-7 7-7'
-            />
-          </svg>
-          Back to Dashboard
-        </button>
+        <div className='flex w-full items-center'>
+          <div className='flex-[0.5]'>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className='mb-6  flex items-center text-primaryy hover:text-primaryx'
+            >
+              <ArrowBack className='w-5 h-5 mr-2' />
+              Back to Dashboard
+            </button>
+          </div>
+
+          <div className='flex-1 '>
+            <Image src={Logo1m} alt='Logo' className='w-1/2' />
+          </div>
+        </div>
 
         {/* Main Content */}
         <div className='bg-white rounded-lg shadow-lg p-6'>
           <div className='mb-6 flex items-center justify-between'>
-            <h1 className='text-2xl font-bold text-gray-900'>
-              Add Verification
-            </h1>
-            {employee && (
+            <div className='w-fit flex justify-between items-center'>
+              <h1 className='text-2xl font-bold text-gray-900'>
+                Start Verification
+              </h1>
+            </div>
+
+            {employee && biometricVerified && (
               <div className='flex items-center gap-4'>
                 <button
                   onClick={() => {
@@ -639,18 +1643,32 @@ export default function AddVerification() {
                     ? 'Submit Verification'
                     : 'Next'}
                 </button>
+                <button
+                  onClick={handleSaveProgress}
+                  className='px-6 py-2 text-white rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-opacity duration-200'
+                  style={{ backgroundColor: '#ffc107' }}
+                >
+                  Save Progress
+                </button>
               </div>
             )}
           </div>
 
+          {/* Loading when skipping IPPS input */}
+          {skipIppsInput && !employee && !error && (
+            <div className='mb-6 text-center'>
+              <p className='text-gray-500'>Loading employee data...</p>
+            </div>
+          )}
+
           {/* IPPS ID Input */}
-          {!employee && (
+          {!employee && !skipIppsInput && (
             <div className='mb-6'>
               <label
                 htmlFor='ippsId'
                 className='block text-sm font-medium text-gray-700 mb-2'
               >
-                Employee IPPS ID
+                Employee IPPS Number
               </label>
               <div className='flex space-x-4'>
                 <input
@@ -659,14 +1677,20 @@ export default function AddVerification() {
                   value={ippsId}
                   onChange={(e) => setIppsId(e.target.value)}
                   className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-                  placeholder='Enter IPPS ID'
+                  placeholder='Enter IPPS Number'
                 />
                 <button
-                  onClick={handleCheck}
+                  onClick={() => handleCheck()}
                   disabled={loading}
                   className='px-6 py-2 bg-primaryy text-white rounded-md hover:bg-primaryx disabled:opacity-50'
                 >
                   {loading ? 'Checking...' : 'Check'}
+                </button>
+                <button
+                  onClick={() => setShowDrawer(true)}
+                  className='px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600'
+                >
+                  Log Exception
                 </button>
               </div>
             </div>
@@ -682,8 +1706,326 @@ export default function AddVerification() {
             />
           )}
 
+          {/* Success Alert */}
+          {successMessage && (
+            <Alert
+              type='success'
+              message={successMessage}
+              onClose={() => setSuccessMessage('')}
+              autoClose={false}
+            />
+          )}
+
+          {/* Biometric Verification */}
+          {employee && !biometricVerified && (
+            <div className='mt-6'>
+              <div className='w-full flex flex-col items-center mb-6'>
+                <h2 className='text-xl font-semibold text-gray-900 mb-4'>
+                  Identity Verification
+                </h2>
+                <div className='flex items-center justify-center mb-2'>
+                  <div className='flex items-center'>
+                    <div
+                      className={`w-10 h-10 rounded-full ${
+                        biometricStep === 'facial'
+                          ? 'bg-blue-500'
+                          : biometricResults.facial.includes('successfully')
+                          ? 'bg-green-500'
+                          : biometricResults.facial
+                          ? 'bg-red-500'
+                          : 'bg-gray-300'
+                      } text-white flex items-center justify-center text-sm font-bold`}
+                    >
+                      1
+                    </div>
+                    <span className='ml-2 text-sm'>Facial Recognition</span>
+                  </div>
+                  <div
+                    className={`h-1 w-16 mx-4 ${
+                      biometricStep !== 'facial' || biometricResults.facial
+                        ? 'bg-blue-500'
+                        : 'bg-gray-300'
+                    }`}
+                  ></div>
+                  <div className='flex items-center'>
+                    <div
+                      className={`w-10 h-10 rounded-full ${
+                        biometricStep === 'surname'
+                          ? 'bg-blue-500'
+                          : biometricResults.surname.includes('successfully')
+                          ? 'bg-green-500'
+                          : biometricResults.surname
+                          ? 'bg-red-500'
+                          : 'bg-gray-300'
+                      } text-white flex items-center justify-center text-sm font-bold`}
+                    >
+                      2
+                    </div>
+                    <span className='ml-2 text-sm'>Verify Surname</span>
+                  </div>
+                  <div
+                    className={`h-1 w-16 mx-4 ${
+                      biometricStep === 'dob' || biometricResults.dob
+                        ? 'bg-blue-500'
+                        : 'bg-gray-300'
+                    }`}
+                  ></div>
+                  <div className='flex items-center'>
+                    <div
+                      className={`w-10 h-10 rounded-full ${
+                        biometricStep === 'dob'
+                          ? 'bg-blue-500'
+                          : biometricResults.dob.includes('successfully')
+                          ? 'bg-green-500'
+                          : biometricResults.dob
+                          ? 'bg-red-500'
+                          : 'bg-gray-300'
+                      } text-white flex items-center justify-center text-sm font-bold`}
+                    >
+                      3
+                    </div>
+                    <span className='ml-2 text-sm'>Verify Date of Birth</span>
+                  </div>
+                </div>
+              </div>
+
+              {biometricStep === 'facial' && (
+                <div>
+                  <Biometrics
+                    onVerifySuccess={() => {
+                      setBiometricResults((prev) => ({
+                        ...prev,
+                        facial: 'Face verified successfully',
+                      }))
+                      setBiometricStep('surname')
+                    }}
+                    onSkip={(error) => {
+                      setBiometricResults((prev) => ({
+                        ...prev,
+                        facial: error,
+                      }))
+                      setBiometricStep('surname')
+                    }}
+                    ippsId={ippsId}
+                  />
+                  <button
+                    onClick={() => {
+                      setBiometricResults((prev) => ({
+                        ...prev,
+                        facial: 'Facial verification marked as failed',
+                      }))
+                      setBiometricStep('surname')
+                    }}
+                    className='mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600'
+                  >
+                    Mark Facial as Failed
+                  </button>
+                </div>
+              )}
+
+              {biometricStep === 'surname' && (
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Enter Employee Surname
+                  </label>
+                  <input
+                    type='text'
+                    value={surnameInput}
+                    onChange={(e) => setSurnameInput(e.target.value)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy mb-4'
+                    placeholder='Enter surname'
+                  />
+                  {surnameResult && (
+                    <p
+                      className={`mb-4 text-sm ${
+                        surnameResult.includes('successfully')
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {surnameResult}
+                    </p>
+                  )}
+                  <div className='flex justify-between'>
+                    <button
+                      onClick={() => setBiometricStep('facial')}
+                      className='px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400'
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log(
+                          'Input:',
+                          JSON.stringify(surnameInput.toLowerCase())
+                        )
+                        console.log(
+                          'Employee lastName:',
+                          JSON.stringify(
+                            (employee?.lastName || '').toLowerCase()
+                          )
+                        )
+                        console.log('Input length:', surnameInput.length)
+                        console.log(
+                          'LastName length:',
+                          (employee?.lastName || '').length
+                        )
+                        const isSuccess =
+                          surnameInput.toLowerCase() ===
+                          (employee?.lastName || '').trim().toLowerCase()
+                        console.log('Surname verification:', {
+                          input: surnameInput,
+                          correct: employee?.lastName,
+                          isSuccess,
+                        })
+                        setSurnameResult(
+                          isSuccess
+                            ? 'Surname verified successfully'
+                            : 'Surname does not match.'
+                        )
+                        setBiometricResults((prev) => ({
+                          ...prev,
+                          surname: isSuccess
+                            ? 'Surname verified successfully'
+                            : 'Surname does not match.',
+                        }))
+                      }}
+                      className='px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600'
+                    >
+                      Verify
+                    </button>
+                    <button
+                      onClick={() => setBiometricStep('dob')}
+                      className='px-4 py-2 bg-primaryy text-white rounded-md hover:bg-primaryx'
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {biometricStep === 'dob' && (
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Select Employee Date of Birth
+                  </label>
+                  <input
+                    type='date'
+                    value={dobInput}
+                    onChange={(e) => setDobInput(e.target.value)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy mb-4'
+                  />
+                  {dobResult && (
+                    <p
+                      className={`mb-4 text-sm ${
+                        dobResult.includes('successfully')
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {dobResult}
+                    </p>
+                  )}
+                  <div className='flex justify-between'>
+                    <button
+                      onClick={() => setBiometricStep('surname')}
+                      className='px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400'
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => {
+                        const empDob = employee?.dateOfBirth || ''
+                        const selectedDate = new Date(dobInput)
+                        const selectedYear = selectedDate
+                          .getFullYear()
+                          .toString()
+                        const selectedMonth = (selectedDate.getMonth() + 1)
+                          .toString()
+                          .padStart(2, '0')
+                        const [empYear, empMonth] = empDob.split('-')
+                        const isSuccess =
+                          selectedYear === empYear && selectedMonth === empMonth
+                        setDobResult(
+                          isSuccess
+                            ? 'Date of Birth verified successfully'
+                            : 'Date of Birth does not match'
+                        )
+                        setBiometricResults((prev) => ({
+                          ...prev,
+                          dob: isSuccess
+                            ? 'Date of Birth verified successfully'
+                            : 'Date of Birth does not match',
+                        }))
+                      }}
+                      className='px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600'
+                    >
+                      Verify
+                    </button>
+                    <button
+                      onClick={() => {
+                        const results = {
+                          ...biometricResults,
+                          surname: biometricResults.surname,
+                          dob: biometricResults.dob,
+                        }
+                        const successCount = Object.values(results).filter(
+                          (r) => r.includes('successfully')
+                        ).length
+                        if (successCount >= 2) {
+                          setBiometricVerified(true)
+                          setVerificationSuccess(true)
+                          setSuccessMessage(
+                            'Biometric verification successful!'
+                          )
+                          setTimeout(() => {
+                            setVerificationSuccess(false)
+                            setSuccessMessage('')
+                          }, 3000)
+                        } else {
+                          setBiometricVerified(true) // Allow continuing even on failure
+                          setError(
+                            'Biometric verification failed. Less than 2 verifications passed. Proceeding with manual verification.'
+                          )
+                        }
+                        // Reset biometric step and inputs for next time
+                        setBiometricStep('facial')
+                        setSurnameInput('')
+                        setDobInput('')
+                        setSurnameResult('')
+                        setDobResult('')
+                        setBiometricResults({
+                          facial: '',
+                          surname: '',
+                          dob: '',
+                        })
+                      }}
+                      className='px-4 py-2 bg-primaryy text-white rounded-md hover:bg-primaryx'
+                    >
+                      Complete Verification
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Verification Success */}
+          {employee && !biometricVerified && verificationSuccess && (
+            <div className='mt-6'>
+              <div className='w-full h-auto flex items-center justify-center mb-4 '>
+                <h2 className='text-xl font-semibold text-gray-900 mb-4'>
+                  Verification Successful
+                </h2>
+                <div className='text-center'>
+                  <CheckCircle className='w-16 h-16 text-green-500 mx-auto' />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Employee Details */}
-          {employee && (
+          {employee && biometricVerified && (
             <div className='flex'>
               {/* Vertical Tabs */}
               <div className='w-1/4 pr-4'>
@@ -724,6 +2066,14 @@ export default function AddVerification() {
                       setShowIssueSelect({ ...showIssueSelect, basic: newShow })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
+                    verify={verify.basic || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        basic: { ...verify.basic, [field]: value },
+                      })
+                    }
                   />
                 )}
                 {activeTab === 'employment' && (
@@ -750,6 +2100,7 @@ export default function AddVerification() {
                       })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
                   />
                 )}
                 {activeTab === 'educational' && (
@@ -776,6 +2127,7 @@ export default function AddVerification() {
                       })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
                   />
                 )}
                 {activeTab === 'payment' && (
@@ -802,6 +2154,7 @@ export default function AddVerification() {
                       })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
                   />
                 )}
                 {activeTab === 'identifications' && (
@@ -828,6 +2181,7 @@ export default function AddVerification() {
                       })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
                   />
                 )}
                 {activeTab === 'documents' && (
@@ -854,6 +2208,7 @@ export default function AddVerification() {
                       })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
                   />
                 )}
                 {activeTab === 'newDocuments' && (
@@ -880,6 +2235,7 @@ export default function AddVerification() {
                       })
                     }
                     possibleIssues={possibleIssues}
+                    ippsId={ippsId}
                   />
                 )}
                 {/* {activeTab === 'medical' && (
@@ -962,14 +2318,14 @@ export default function AddVerification() {
           )}
 
           {/* Add Exception Button */}
-          {error && !employee && (
+          {/* {error && !employee && (
             <button
               onClick={() => setShowDrawer(true)}
               className='px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600'
             >
-              Add Exception
+              Log Exception
             </button>
-          )}
+          )} */}
         </div>
       </div>
 
@@ -981,49 +2337,50 @@ export default function AddVerification() {
             onClick={() => setShowDrawer(false)}
           ></div>
           <div className='relative ml-auto w-full max-w-md bg-white shadow-xl transform transition-transform duration-300'>
-            <div className='p-6'>
+            <div className='p-6 max-h-screen overflow-y-auto'>
               <h2 className='text-xl font-bold text-gray-900 mb-4'>
-                Add Exception
+                Log Exception
               </h2>
-              <input
-                type='text'
-                placeholder='IPPS ID'
-                value={exceptionData.ippsId}
-                onChange={(e) =>
-                  setExceptionData({
-                    ...exceptionData,
-                    ippsId: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-              />
-              <div className='space-y-4 flex flex-row flex-wrap gap-4'>
-                <div>
-                  <input
-                    type='text'
-                    placeholder='First Name'
-                    value={exceptionData.firstName}
-                    onChange={(e) =>
-                      setExceptionData({
-                        ...exceptionData,
-                        firstName: e.target.value,
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-                  />
-                  <input
-                    type='text'
-                    placeholder='Last Name'
-                    value={exceptionData.lastName}
-                    onChange={(e) =>
-                      setExceptionData({
-                        ...exceptionData,
-                        lastName: e.target.value,
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-                  />
-                </div>
+
+              <div className='space-y-1 flex flex-row flex-wrap gap-2'>
+                <input
+                  type='text'
+                  placeholder='IPPS ID'
+                  value={exceptionData.ippsId}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      ippsId: e.target.value,
+                    })
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                />
+                <input
+                  type='text'
+                  placeholder='First Name'
+                  value={exceptionData.firstName}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      firstName: e.target.value,
+                    })
+                  }
+                  required
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                />
+                <input
+                  type='text'
+                  placeholder='Last Name'
+                  value={exceptionData.lastName}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      lastName: e.target.value,
+                    })
+                  }
+                  required
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                />
 
                 <input
                   type='date'
@@ -1035,11 +2392,54 @@ export default function AddVerification() {
                       dateOfBirth: e.target.value,
                     })
                   }
+                  required
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
                 />
                 <input
-                  type='text'
-                  placeholder='Department'
+                  type='email'
+                  placeholder='Email'
+                  value={exceptionData.email}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      email: e.target.value,
+                    })
+                  }
+                  required
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                />
+                <input
+                  type='tel'
+                  placeholder='Phone Number'
+                  value={exceptionData.phoneNumber}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      phoneNumber: e.target.value,
+                    })
+                  }
+                  required
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                />
+                <select
+                  value={exceptionData.organisation}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      organisation: e.target.value,
+                    })
+                  }
+                  required
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                >
+                  <option value=''>Select Organisation/Ministry</option>
+                  {organisations.map((org) => (
+                    <option key={org.id} value={org.name}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+                <select
                   value={exceptionData.department}
                   onChange={(e) =>
                     setExceptionData({
@@ -1047,15 +2447,97 @@ export default function AddVerification() {
                       department: e.target.value,
                     })
                   }
+                  required
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-                />
+                >
+                  <option value=''>Select Department</option>
+                  {departments.map((dep) => (
+                    <option key={dep.id} value={dep.name}>
+                      {dep.name}
+                    </option>
+                  ))}
+                </select>
+                <div className='space-y-2'>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Tags
+                  </label>
+                  <input
+                    type='text'
+                    placeholder='Search tags...'
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy mb-2'
+                  />
+                  <div className='max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2'>
+                    {tags
+                      .filter((tag) =>
+                        tag.name
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase())
+                      )
+                      .map((tag) => (
+                        <label
+                          key={tag.id}
+                          className='flex items-center space-x-2'
+                        >
+                          <input
+                            type='checkbox'
+                            checked={exceptionData.tags.includes(tag.name)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setExceptionData({
+                                  ...exceptionData,
+                                  tags: [...exceptionData.tags, tag.name],
+                                })
+                              } else {
+                                setExceptionData({
+                                  ...exceptionData,
+                                  tags: exceptionData.tags.filter(
+                                    (t) => t !== tag.name
+                                  ),
+                                })
+                              }
+                            }}
+                            className='form-checkbox'
+                          />
+                          <span>{tag.name}</span>
+                        </label>
+                      ))}
+                  </div>
+                  {exceptionData.tags.length > 0 && (
+                    <div className='flex flex-wrap gap-2 mt-2'>
+                      {exceptionData.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
+                        >
+                          {tag}
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setExceptionData({
+                                ...exceptionData,
+                                tags: exceptionData.tags.filter(
+                                  (t) => t !== tag
+                                ),
+                              })
+                            }
+                            className='ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-500'
+                          >
+                            <Close className='w-2 h-2' />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className='flex space-x-4 mt-6'>
                 <button
                   onClick={handleAddException}
                   className='flex-1 px-4 py-2 bg-primaryy text-white rounded-md hover:bg-primaryx'
                 >
-                  Add Exception
+                  Save
                 </button>
                 <button
                   onClick={() => setShowDrawer(false)}

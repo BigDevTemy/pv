@@ -7,6 +7,8 @@ interface Props {
   setShowIssueSelect: (show: { [field: string]: boolean }) => void
   possibleIssues: string[]
   onNext: () => void
+  verify: { [key: string]: boolean }
+  onVerifyChange: (field: string, value: boolean) => void
 }
 
 export default function BankInfo({
@@ -18,6 +20,8 @@ export default function BankInfo({
   setShowIssueSelect,
   possibleIssues,
   onNext,
+  verify,
+  onVerifyChange,
 }: Props) {
   const fields = ['accountNumber', 'bankName', 'branch', 'ifscCode']
 
@@ -34,9 +38,19 @@ export default function BankInfo({
                 type='text'
                 value={data[field] || ''}
                 onChange={(e) => onChange(field, e.target.value)}
-                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                disabled={!!data[field]}
+                className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy disabled:bg-gray-100 disabled:cursor-not-allowed'
                 placeholder={`Enter ${field.replace(/([A-Z])/g, ' $1').trim()}`}
               />
+              <label className='flex items-center space-x-1'>
+                <input
+                  type='checkbox'
+                  checked={verify[field] || false}
+                  onChange={(e) => onVerifyChange(field, e.target.checked)}
+                  className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
+                />
+                <span className='text-xs'>Verify</span>
+              </label>
               {showIssueSelect[field] ? (
                 <div className='flex flex-col space-y-1'>
                   <div className='flex justify-end'>
