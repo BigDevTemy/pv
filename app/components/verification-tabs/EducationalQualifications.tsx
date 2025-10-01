@@ -17,6 +17,7 @@ interface Props {
   ippsId: string
   verify: { [key: string]: boolean }
   onVerifyChange: (field: string, value: boolean) => void
+  currentUserId: string
 }
 
 export default function EducationalQualifications({
@@ -32,6 +33,7 @@ export default function EducationalQualifications({
   ippsId,
   verify,
   onVerifyChange,
+  currentUserId,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -238,6 +240,7 @@ export default function EducationalQualifications({
           const newDocs = append ? [...currentDocs, ...docs] : docs
           setAssignedDocuments({ ...assignedDocuments, [field]: newDocs })
         }}
+        currentUserId={currentUserId}
       />
     </>
   )

@@ -18,6 +18,7 @@ interface Props {
   ippsId: string
   field: string
   onAssign: (field: string, documents: string[], append?: boolean) => void
+  currentUserId: string
 }
 
 export default function DocumentsModal({
@@ -26,6 +27,7 @@ export default function DocumentsModal({
   ippsId,
   field,
   onAssign,
+  currentUserId,
 }: Props) {
   const [activeTab, setActiveTab] = useState<'uploaded' | 'upload' | 'scan'>(
     'uploaded'
@@ -127,7 +129,7 @@ export default function DocumentsModal({
       formData.append('name', documentName)
       formData.append('type', documentType)
       formData.append('submittedAt', new Date().toISOString())
-      formData.append('submittedBy', 'admin')
+      formData.append('submittedBy', currentUserId)
 
       const createdRecord = await pb.collection('documents').create(formData)
       onAssign(field, [createdRecord.name], true)
@@ -190,7 +192,7 @@ export default function DocumentsModal({
       formData.append('name', documentName)
       formData.append('type', documentType)
       formData.append('submittedAt', new Date().toISOString())
-      formData.append('submittedBy', 'admin')
+      formData.append('submittedBy', currentUserId)
 
       const createdRecord = await pb.collection('documents').create(formData)
       onAssign(field, [createdRecord.name], true)

@@ -35,6 +35,7 @@ interface Props {
   ippsId: string
   verify: { [key: string]: boolean }
   onVerifyChange: (field: string, value: boolean) => void
+  currentUserId: string
 }
 
 export default function Documents({
@@ -50,6 +51,7 @@ export default function Documents({
   ippsId,
   verify,
   onVerifyChange,
+  currentUserId,
 }: Props) {
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [loading, setLoading] = useState(true)
@@ -459,6 +461,7 @@ export default function Documents({
             const newDocs = append ? [...currentDocs, ...docs] : docs
             setAssignedDocuments({ ...assignedDocuments, [field]: newDocs })
           }}
+          currentUserId={currentUserId}
         />
       </div>
     </>

@@ -75,6 +75,7 @@ export default function AddVerification() {
   >('facial')
   const [skipIppsInput, setSkipIppsInput] = useState(false)
   const [hasHandledIppsId, setHasHandledIppsId] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState('')
   const [biometricResults, setBiometricResults] = useState({
     facial: '',
     surname: '',
@@ -374,6 +375,14 @@ export default function AddVerification() {
       handleCheck(ippsIdParam)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const currentUserStr = localStorage.getItem('currentUser')
+    if (currentUserStr) {
+      const currentUser = JSON.parse(currentUserStr)
+      setCurrentUserId(currentUser.user_id || '')
+    }
+  }, [])
 
   useEffect(() => {
     const fetchOrgDepTags = async () => {
@@ -2187,6 +2196,7 @@ export default function AddVerification() {
                         basic: { ...verify.basic, [field]: value },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {activeTab === 'employment' && (
@@ -2228,6 +2238,7 @@ export default function AddVerification() {
                         employment: { ...verify.employment, [field]: value },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {activeTab === 'educational' && (
@@ -2269,6 +2280,7 @@ export default function AddVerification() {
                         educational: { ...verify.educational, [field]: value },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {activeTab === 'payment' && (
@@ -2310,6 +2322,7 @@ export default function AddVerification() {
                         payment: { ...verify.payment, [field]: value },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {activeTab === 'identifications' && (
@@ -2354,6 +2367,7 @@ export default function AddVerification() {
                         },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {activeTab === 'documents' && (
@@ -2395,6 +2409,7 @@ export default function AddVerification() {
                         documents: { ...verify.documents, [field]: value },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {activeTab === 'newDocuments' && (
@@ -2439,6 +2454,7 @@ export default function AddVerification() {
                         },
                       })
                     }
+                    currentUserId={currentUserId}
                   />
                 )}
                 {/* {activeTab === 'medical' && (

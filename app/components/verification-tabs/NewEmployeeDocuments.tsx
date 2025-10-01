@@ -31,6 +31,7 @@ interface Props {
   ippsId: string
   verify: { [key: string]: boolean }
   onVerifyChange: (field: string, value: boolean) => void
+  currentUserId: string
 }
 
 export default function NewEmployeeDocuments({
@@ -46,6 +47,7 @@ export default function NewEmployeeDocuments({
   ippsId,
   verify,
   onVerifyChange,
+  currentUserId,
 }: Props) {
   const [customDocuments, setCustomDocuments] = useState<CustomDocument[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -382,6 +384,7 @@ export default function NewEmployeeDocuments({
             const newDocs = append ? [...currentDocs, ...docs] : docs
             setAssignedDocuments({ ...assignedDocuments, [field]: newDocs })
           }}
+          currentUserId={currentUserId}
         />
       </div>
     </>
