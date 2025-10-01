@@ -1,6 +1,7 @@
 'use client'
 import Image from 'next/image'
 import Logo1m from '../images/logo-me.png'
+import PemsoftLogo from '../images/pemsoft-logo.png'
 import { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
 import api, { LOGIN } from './Serverurls'
@@ -86,7 +87,12 @@ export default function Login() {
           console.log('Success:', data)
 
           if (data.success) {
-            setMessage('Login successful!')
+            setMessage('Login Successful')
+
+            // After a few seconds, show setting up message
+            setTimeout(() => {
+              setMessage('Setting up local configuration...')
+            }, 2000)
 
             const existingRecords = await pb
               .collection('loggedInUsers')
@@ -234,7 +240,11 @@ export default function Login() {
               JSON.stringify(dataUserWithUserId)
             )
 
-            router.push('/dashboard')
+            // After syncing, show success message, then navigate
+            setMessage('Configuration successful')
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 2000)
           } else {
             setError(data.message || 'Login failed. Please try again.')
           }
@@ -546,7 +556,7 @@ export default function Login() {
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8'>
+    <div className='min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8'>
       <div className='max-w-6xl w-full flex shadow-2xl rounded-2xl overflow-hidden bg-white'>
         {/* Left Side - Logo and Branding */}
         <div className='flex-[0.5] bg-white flex items-center justify-center p-12 relative border-r border-gray-100'>
@@ -567,6 +577,12 @@ export default function Login() {
         {/* Right Side - Login Form */}
         <div className='flex-[0.5] p-12 flex items-center justify-center bg-white'>
           <div className='w-full max-w-md space-y-8'>{renderContent()}</div>
+        </div>
+      </div>
+      <div className='mt-1 text-center absolute bottom-0.5'>
+        <div className='flex items-center justify-center'>
+          <span className='text-sm text-gray-500 mr-4'>Powered By:</span>
+          <Image src={PemsoftLogo} alt='PEMSOFT Logo' className='w-28 h-auto' />
         </div>
       </div>
     </div>

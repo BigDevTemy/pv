@@ -9,6 +9,7 @@ import { addCronJob } from '@/lib/addCronJob'
 import { start } from 'repl'
 import Image from 'next/image'
 import Logo from '../images/logo-me.png'
+import PemsoftLogo from '../images/pemsoft-logo.png'
 import BarChart from '@mui/icons-material/BarChart'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import HourglassEmpty from '@mui/icons-material/HourglassEmpty'
@@ -20,6 +21,7 @@ import {
   CloudDoneOutlined,
   CloudOffOutlined,
 } from '@mui/icons-material'
+import { Tooltip } from '@mui/material'
 
 interface User {
   id: string
@@ -174,10 +176,12 @@ export default function Dashboard() {
   const completedToday = verifications.filter((v) => {
     const today = new Date().toISOString().split('T')[0]
     const submittedDate = new Date(v.submittedAt).toISOString().split('T')[0]
+    console.log('today', today, 'submittedDate', submittedDate)
+    console.log('submittedBy', v.submittedBy, 'current', currentUser?.user_id)
     return (
       v.status === 'complete' &&
-      v.submittedBy === currentUser?.user_id &&
-      submittedDate === today
+      v.submittedBy == currentUser?.user_id &&
+      submittedDate == today
     )
   }).length
 
@@ -191,30 +195,38 @@ export default function Dashboard() {
       value: totalVerifications.toString(),
       icon: <BarChart />,
       color: 'bg-blue-500',
+      tooltip:
+        'Total number of completed verifications across all CC officers.',
     },
     {
       title: 'Completed Verifications',
       value: completedVerifications.toString(),
       icon: <CheckCircle />,
       color: 'bg-green-500',
+      tooltip: 'Number of verifications completed by you.',
     },
     {
       title: 'Pending Verifications',
       value: pendingRequests.toString(),
       icon: <HourglassEmpty />,
       color: 'bg-yellow-500',
+      tooltip:
+        'Number of verifications submitted by you that are still pending.',
     },
     {
       title: 'Completed Today',
       value: completedToday.toString(),
       icon: <Celebration />,
       color: 'bg-purple-500',
+      tooltip: 'Number of verifications completed by you today.',
     },
     {
       title: 'Sync',
       value: sync.toString() + '/' + completedVerifications.toString(),
       icon: <CloudDoneOutlined />,
       color: 'bg-primaryy',
+      tooltip:
+        'Number of your completed verifications that have been synced to the server.',
     },
   ]
 
@@ -226,7 +238,7 @@ export default function Dashboard() {
 
   console.log(filteredVerifications)
   return (
-    <div className='min-h-screen bg-gray-50 p-4 md:p-8'>
+    <div className='min-h-screen bg-gray-50 p-4 md:p-8 relative'>
       <div className='max-w-7xl mx-auto'>
         {/* Header with Welcome message and buttons */}
         <div className='flex justify-between items-center mb-8'>
@@ -245,12 +257,12 @@ export default function Dashboard() {
               Start Verification
             </button>
 
-            <button
+            {/* <button
               onClick={() => router.push('/upload-image')}
               className='bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200'
             >
               Upload Image
-            </button>
+            </button> */}
 
             <button
               onClick={handleLogout}
@@ -264,18 +276,44 @@ export default function Dashboard() {
         {/* Cards */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8'>
           {cards.map((card, index) => (
-            <div
+            <Tooltip
+              title={card.tooltip}
               key={index}
-              className={`${card.color} text-white p-6 rounded-lg shadow-lg`}
+              placement='top'
+              arrow
+              slotProps={{
+                tooltip: {
+                  sx: {
+                    backgroundColor: 'white',
+                    color: 'black',
+                    border: '1px solid #ccc',
+                    fontSize: '0.875rem',
+                    maxWidth: '200px',
+                  },
+                },
+                arrow: {
+                  sx: {
+                    color: 'white',
+                    '&::before': {
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                    },
+                  },
+                },
+              }}
             >
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm opacity-80'>{card.title}</p>
-                  <p className='text-3xl font-bold'>{card.value}</p>
+              <div
+                className={`${card.color} text-white p-6 rounded-lg shadow-lg`}
+              >
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm opacity-80'>{card.title}</p>
+                    <p className='text-3xl font-bold'>{card.value}</p>
+                  </div>
+                  <div className='text-4xl'>{card.icon}</div>
                 </div>
-                <div className='text-4xl'>{card.icon}</div>
               </div>
-            </div>
+            </Tooltip>
           ))}
         </div>
 
@@ -415,6 +453,13 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+        </div>
+        <div
+          className='mt-4 flex items-center justify-center  bottom-0 absolute'
+          style={{ width: '90%' }}
+        >
+          <span className='text-sm text-gray-500 mr-4'>Powered By:</span>
+          <Image src={PemsoftLogo} alt='PEMSOFT Logo' className='w-32 h-auto' />
         </div>
       </div>
     </div>

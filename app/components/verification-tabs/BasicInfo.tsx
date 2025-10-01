@@ -18,6 +18,8 @@ interface Props {
   onChange: (field: string, value: string) => void
   issues: { [field: string]: string[] }
   setIssues: (issues: { [field: string]: string[] }) => void
+  assignedDocuments: { [field: string]: string[] }
+  setAssignedDocuments: (docs: { [field: string]: string[] }) => void
   showIssueSelect: { [field: string]: boolean }
   setShowIssueSelect: (show: { [field: string]: boolean }) => void
   possibleIssues: string[]
@@ -30,6 +32,8 @@ export default function BasicInfo({
   onChange,
   issues,
   setIssues,
+  assignedDocuments,
+  setAssignedDocuments,
   showIssueSelect,
   setShowIssueSelect,
   possibleIssues,
@@ -40,9 +44,6 @@ export default function BasicInfo({
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentField, setCurrentField] = useState('')
-  const [assignedDocuments, setAssignedDocuments] = useState<{
-    [field: string]: string[]
-  }>({})
   const [hasBeenTagged, setHasBeenTagged] = useState<{
     [field: string]: boolean
   }>({})
@@ -103,7 +104,7 @@ export default function BasicInfo({
       {data.photo ? (
         <div className='text-center mb-6'>
           <img
-            src={data.photo}
+            src={data.profilePic}
             alt='Profile'
             className='w-40 h-40 rounded-full mx-auto bg-gray-200'
           />
@@ -163,7 +164,7 @@ export default function BasicInfo({
                     }
                     className='text-gray-500 hover:text-gray-700'
                   >
-                    {issues[field]?.length > 0 ? (
+                    {(issues[field] || []).length > 0 ? (
                       <Warning className='w-5 h-5 text-red-500' />
                     ) : (
                       <MoreHoriz className='w-5 h-5' />
@@ -176,7 +177,7 @@ export default function BasicInfo({
                     }}
                     className='text-blue-500 hover:text-blue-700'
                   >
-                    {assignedDocuments[field]?.length > 0 ? (
+                    {(assignedDocuments[field] || []).length > 0 ? (
                       <AttachFile className='w-5 h-5 text-green-500' />
                     ) : (
                       <UploadFile className='w-5 h-5' />
@@ -205,7 +206,9 @@ export default function BasicInfo({
                         >
                           <input
                             type='checkbox'
-                            checked={issues[field]?.includes(issue) || false}
+                            checked={
+                              (issues[field] || []).includes(issue) || false
+                            }
                             onChange={(e) => {
                               const currentIssues = issues[field] || []
                               const newIssues = e.target.checked
@@ -231,9 +234,9 @@ export default function BasicInfo({
                 )}
               </div>
             </div>
-            {issues[field]?.length > 0 && (
+            {(issues[field] || []).length > 0 && (
               <div className='mt-2 flex flex-wrap gap-1'>
-                {issues[field].map((issue) => (
+                {(issues[field] || []).map((issue) => (
                   <span
                     key={issue}
                     onClick={() =>
@@ -245,7 +248,7 @@ export default function BasicInfo({
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        const newIssues = issues[field].filter(
+                        const newIssues = (issues[field] || []).filter(
                           (i) => i !== issue
                         )
                         setIssues({ ...issues, [field]: newIssues })
@@ -258,9 +261,9 @@ export default function BasicInfo({
                 ))}
               </div>
             )}
-            {assignedDocuments[field]?.length > 0 && (
+            {(assignedDocuments[field] || []).length > 0 && (
               <div className='mt-2 flex flex-wrap gap-1'>
-                {assignedDocuments[field].map((docName, index) => (
+                {(assignedDocuments[field] || []).map((docName, index) => (
                   <span
                     key={`${field}-${index}`}
                     className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
@@ -268,7 +271,7 @@ export default function BasicInfo({
                     {'Document: ' + docName}
                     <button
                       onClick={() => {
-                        const newDocs = assignedDocuments[field].filter(
+                        const newDocs = (assignedDocuments[field] || []).filter(
                           (_, i) => i !== index
                         )
                         setAssignedDocuments({
@@ -292,12 +295,11 @@ export default function BasicInfo({
         onClose={() => setIsModalOpen(false)}
         ippsId={ippsId}
         field={currentField}
-        onAssign={(field, docs, append) =>
-          setAssignedDocuments((prev) => ({
-            ...prev,
-            [field]: append ? [...(prev[field] || []), ...docs] : docs,
-          }))
-        }
+        onAssign={(field, docs, append) => {
+          const currentDocs = assignedDocuments[field] || []
+          const newDocs = append ? [...currentDocs, ...docs] : docs
+          setAssignedDocuments({ ...assignedDocuments, [field]: newDocs })
+        }}
       />
     </>
   )

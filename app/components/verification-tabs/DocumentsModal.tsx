@@ -508,7 +508,7 @@ export default function DocumentsModal({
                     <option value='Medical Report'>Medical Report</option>
                     <option value='Bank Statement'>Bank Statement</option>
                     <option value='Utility Bill'>Utility Bill</option>
-                    <option value='Other'>Other</option>
+                    <option value='Others'>Others</option>
                   </select>
                 </div>
               </div>
@@ -682,7 +682,7 @@ export default function DocumentsModal({
                     <option value='Medical Report'>Medical Report</option>
                     <option value='Bank Statement'>Bank Statement</option>
                     <option value='Utility Bill'>Utility Bill</option>
-                    <option value='Other'>Other</option>
+                    <option value='Others'>Others</option>
                   </select>
                 </div>
                 <div>

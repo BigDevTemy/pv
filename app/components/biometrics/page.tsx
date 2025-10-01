@@ -121,8 +121,10 @@ export default function Biometrics({
         liveDescriptor
       )
       if (distance < 0.5) {
-        setMessage('✅ Face verified! (distance: ' + distance.toFixed(2) + ')')
-        onVerifySuccess?.()
+        setMessage('Face verification successful!')
+        setTimeout(() => {
+          onVerifySuccess?.()
+        }, 2000)
       } else {
         setError(
           '❌ Face does not match (distance: ' + distance.toFixed(2) + ')'

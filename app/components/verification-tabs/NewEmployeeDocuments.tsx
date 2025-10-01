@@ -23,10 +23,14 @@ interface Props {
   onChange: (field: string, value: string) => void
   issues: { [field: string]: string[] }
   setIssues: (issues: { [field: string]: string[] }) => void
+  assignedDocuments: { [field: string]: string[] }
+  setAssignedDocuments: (docs: { [field: string]: string[] }) => void
   showIssueSelect: { [field: string]: boolean }
   setShowIssueSelect: (show: { [field: string]: boolean }) => void
   possibleIssues: string[]
   ippsId: string
+  verify: { [key: string]: boolean }
+  onVerifyChange: (field: string, value: boolean) => void
 }
 
 export default function NewEmployeeDocuments({
@@ -34,18 +38,19 @@ export default function NewEmployeeDocuments({
   onChange,
   issues,
   setIssues,
+  assignedDocuments,
+  setAssignedDocuments,
   showIssueSelect,
   setShowIssueSelect,
   possibleIssues,
   ippsId,
+  verify,
+  onVerifyChange,
 }: Props) {
   const [customDocuments, setCustomDocuments] = useState<CustomDocument[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentField, setCurrentField] = useState('')
-  const [assignedDocuments, setAssignedDocuments] = useState<{
-    [field: string]: string[]
-  }>({})
   const filteredIssues = useMemo(
     () =>
       possibleIssues.filter((issue) =>
@@ -238,6 +243,17 @@ export default function NewEmployeeDocuments({
                         )}
                       </button>
                     </div>
+                    <label className='flex items-center space-x-1 mt-2'>
+                      <input
+                        type='checkbox'
+                        checked={verify[`custom_${index}`] || false}
+                        onChange={(e) =>
+                          onVerifyChange(`custom_${index}`, e.target.checked)
+                        }
+                        className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
+                      />
+                      <span className='text-xs text-gray-600'>Verify</span>
+                    </label>
                     {showIssueSelect[`custom_${index}`] && (
                       <div
                         ref={dropdownRef}
@@ -361,12 +377,11 @@ export default function NewEmployeeDocuments({
           onClose={() => setIsModalOpen(false)}
           ippsId={ippsId}
           field={currentField}
-          onAssign={(field, docs, append) =>
-            setAssignedDocuments((prev) => ({
-              ...prev,
-              [field]: append ? [...(prev[field] || []), ...docs] : docs,
-            }))
-          }
+          onAssign={(field, docs, append) => {
+            const currentDocs = assignedDocuments[field] || []
+            const newDocs = append ? [...currentDocs, ...docs] : docs
+            setAssignedDocuments({ ...assignedDocuments, [field]: newDocs })
+          }}
         />
       </div>
     </>

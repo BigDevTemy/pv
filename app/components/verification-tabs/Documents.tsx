@@ -27,10 +27,14 @@ interface Props {
   onChange: (field: string, value: string) => void
   issues: { [field: string]: string[] }
   setIssues: (issues: { [field: string]: string[] }) => void
+  assignedDocuments: { [field: string]: string[] }
+  setAssignedDocuments: (docs: { [field: string]: string[] }) => void
   showIssueSelect: { [field: string]: boolean }
   setShowIssueSelect: (show: { [field: string]: boolean }) => void
   possibleIssues: string[]
   ippsId: string
+  verify: { [key: string]: boolean }
+  onVerifyChange: (field: string, value: boolean) => void
 }
 
 export default function Documents({
@@ -38,10 +42,14 @@ export default function Documents({
   onChange,
   issues,
   setIssues,
+  assignedDocuments,
+  setAssignedDocuments,
   showIssueSelect,
   setShowIssueSelect,
   possibleIssues,
   ippsId,
+  verify,
+  onVerifyChange,
 }: Props) {
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,9 +62,6 @@ export default function Documents({
   const [uploading, setUploading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentField, setCurrentField] = useState('')
-  const [assignedDocuments, setAssignedDocuments] = useState<{
-    [field: string]: string[]
-  }>({})
   const [documentName, setDocumentName] = useState('')
   const [documentType, setDocumentType] = useState('')
   const filteredIssues = useMemo(
@@ -264,6 +269,17 @@ export default function Documents({
                 }
                 className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
               />
+              <label className='flex items-center space-x-1 mt-2'>
+                <input
+                  type='checkbox'
+                  checked={verify[`document_${docType.id}`] || false}
+                  onChange={(e) =>
+                    onVerifyChange(`document_${docType.id}`, e.target.checked)
+                  }
+                  className='h-4 w-4 text-primaryy focus:ring-primaryy border-gray-300 rounded'
+                />
+                <span className='text-xs text-gray-600'>Verify</span>
+              </label>
               <div className='relative mt-2'>
                 <div className='flex items-center space-x-1'>
                   <button
@@ -302,10 +318,10 @@ export default function Documents({
                     onClick={() => {
                       // Assign all uploaded documents to this field
                       const allDocIds = uploadedDocuments.map((doc) => doc.id)
-                      setAssignedDocuments((prev) => ({
-                        ...prev,
+                      setAssignedDocuments({
+                        ...assignedDocuments,
                         [`document_${docType.id}`]: allDocIds,
-                      }))
+                      })
                     }}
                     className='text-blue-500 hover:text-blue-700'
                   >
@@ -438,12 +454,11 @@ export default function Documents({
           onClose={() => setIsModalOpen(false)}
           ippsId={ippsId}
           field={currentField}
-          onAssign={(field, docs, append) =>
-            setAssignedDocuments((prev) => ({
-              ...prev,
-              [field]: append ? [...(prev[field] || []), ...docs] : docs,
-            }))
-          }
+          onAssign={(field, docs, append) => {
+            const currentDocs = assignedDocuments[field] || []
+            const newDocs = append ? [...currentDocs, ...docs] : docs
+            setAssignedDocuments({ ...assignedDocuments, [field]: newDocs })
+          }}
         />
       </div>
     </>

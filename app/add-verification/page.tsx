@@ -18,6 +18,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import Close from '@mui/icons-material/Close'
 import { Face, FaceOutlined } from '@mui/icons-material'
 import Logo1m from '../images/logo-me.png'
+import PemsoftLogo from '../images/pemsoft-logo.png'
 import Image from 'next/image'
 // import MedicalInfo from '../components/verification-tabs/MedicalInfo'
 // import BankInfo from '../components/verification-tabs/BankInfo'
@@ -37,6 +38,8 @@ interface OrgDep {
   id: string
   name: string
 }
+
+type IssueType = string[] | { tags: string[]; document_proof: string[] }
 
 export default function AddVerification() {
   const router = useRouter()
@@ -59,6 +62,7 @@ export default function AddVerification() {
     phoneNumber: '',
     department: '',
     organisation: '',
+    idnumber: '',
     tags: [] as string[],
   })
   const [searchTerm, setSearchTerm] = useState('')
@@ -166,6 +170,9 @@ export default function AddVerification() {
   })
 
   const [issues, setIssues] = useState<{
+    [key: string]: { [field: string]: string[] }
+  }>({})
+  const [assignedDocuments, setAssignedDocuments] = useState<{
     [key: string]: { [field: string]: string[] }
   }>({})
   const [showIssueSelect, setShowIssueSelect] = useState<{
@@ -735,97 +742,146 @@ export default function AddVerification() {
 
         if (existing) {
           // Load existing data
-          setVerificationData(
-            existing.rawVerificationData || {
-              basic: {
-                firstName: emp.firstName || '',
-                lastName: (emp.lastName || '').trim(),
-                dateOfBirth: emp.dob || '',
-                gender: emp.gender || '',
-                maritalStatus: emp.maritalStatus || '',
-                nationality: emp.nationality || '',
-                stateOfOrigin: emp.state_of_origin || '',
-                lga: emp.lga || '',
-                phoneNumber: emp.phone || '',
-                email: emp.email || '',
-                residentialAddress: emp.residentialAddress || '',
-                nextOfKin: emp.nextOfKin || '',
-                nextOfKinRelationship: emp.nextOfKinRelationship || '',
-                profilePic:
-                  emp.profilePic ||
-                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
-                photo: emp.photo || '',
-              },
-              employment: {
-                dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
-                organisation: emp.organisation || '',
-                refId: emp.ref_id || '',
-                currentAppointment: emp.currentAppointment || '',
-                jobLocation: emp.joblocation || '',
-                jobTitle: emp.jobtitle || '',
-                position: emp.position || '',
-                taxState: emp.taxstate || '',
-                designation: emp.designation || '',
-                gradeLevel: emp.gradeLevel || '',
-                stepSum18: emp.sum_step18 || '',
-                grade: emp.grade || '',
-                mda: emp.mda || '',
-                cdre: emp.cdre || '',
-                dateOfConfirmation: emp.confirmationDate || '',
-                dateOfHire: emp.hireDate || '',
-                expectedRetirementDate: emp.expectedRetirementDate || '',
-                dateOfLastPromotion: emp.dateOfLastPromotion || '',
-              },
-              educational: {
-                highestQualification: emp.highestQualification || '',
-                institutionAttended: emp.institutionAttended || '',
-                yearOfGraduation: emp.yearOfGraduation || '',
-                professionalCertifications:
-                  emp.professionalCertifications || '',
-                trainingAttended: emp.trainingAttended || '',
-              },
-              payment: {
-                salaryStructure: emp.salaryStructure || '',
-                basicSalary: emp.basicSalary || '',
-                allowances: emp.allowances || '',
-                deductions: emp.deductions || '',
-                netPay: emp.netPay || '',
-                accountNumber: emp.accountNumber || '',
-                bvn: emp.bvn || '',
-                pfaName: emp.pfaName || '',
-                rsaPin: emp.rsaPin || '',
-                nhisNumber: emp.nhisNumber || '',
-              },
-              identifications: {
-                bvn: emp.bvn || '',
-                passportPhotograph: emp.passportPhotograph || '',
-                fingerprints: emp.fingerprints || '',
-                digitalSignatures: emp.digitalSignatures || '',
-              },
-              documents: emp.documents || {},
-              newDocuments: emp.newDocuments || {},
-              medical: {
-                bloodType: emp.bloodType || '',
-                allergies: emp.allergies || '',
-                emergencyContact: emp.emergencyContact || '',
-                medicalHistory: emp.medicalHistory || '',
-              },
-              bank: {
-                accountNumber: emp.accountNumber || '',
-                bankName: emp.bankName || '',
-                branch: emp.branch || '',
-                ifscCode: emp.ifscCode || '',
-              },
-              education: {
-                degree: emp.degree || '',
-                educationInstitution: emp.educationInstitution || '',
-                yearOfPassing: emp.yearOfPassing || '',
-                finalGrade: emp.finalGrade || '',
-              },
+          const empBasic = {
+            firstName: emp.firstName || '',
+            lastName: (emp.lastName || '').trim(),
+            dateOfBirth: emp.dob || '',
+            gender: emp.gender || '',
+            maritalStatus: emp.maritalStatus || '',
+            nationality: emp.nationality || '',
+            stateOfOrigin: emp.state_of_origin || '',
+            lga: emp.lga || '',
+            phoneNumber: emp.phone || '',
+            email: emp.email || '',
+            residentialAddress: emp.residentialAddress || '',
+            nextOfKin: emp.nextOfKin || '',
+            nextOfKinRelationship: emp.nextOfKinRelationship || '',
+            profilePic:
+              emp.profilePic ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
+            photo: emp.photo || '',
+          }
+          const empEmployment = {
+            dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
+            organisation: emp.organisation || '',
+            refId: emp.ref_id || '',
+            currentAppointment: emp.currentAppointment || '',
+            jobLocation: emp.joblocation || '',
+            jobTitle: emp.jobtitle || '',
+            position: emp.position || '',
+            taxState: emp.taxstate || '',
+            designation: emp.designation || '',
+            gradeLevel: emp.gradeLevel || '',
+            stepSum18: emp.sum_step18 || '',
+            grade: emp.grade || '',
+            mda: emp.mda || '',
+            cdre: emp.cdre || '',
+            dateOfConfirmation: emp.confirmationDate || '',
+            dateOfHire: emp.hireDate || '',
+            expectedRetirementDate: emp.expectedRetirementDate || '',
+            dateOfLastPromotion: emp.dateOfLastPromotion || '',
+          }
+          const empEducational = {
+            highestQualification: emp.highestQualification || '',
+            institutionAttended: emp.institutionAttended || '',
+            yearOfGraduation: emp.yearOfGraduation || '',
+            professionalCertifications: emp.professionalCertifications || '',
+            trainingAttended: emp.trainingAttended || '',
+          }
+          const empPayment = {
+            salaryStructure: emp.salaryStructure || '',
+            basicSalary: emp.basicSalary || '',
+            allowances: emp.allowances || '',
+            deductions: emp.deductions || '',
+            netPay: emp.netPay || '',
+            accountNumber: emp.accountNumber || '',
+            bvn: emp.bvn || '',
+            pfaName: emp.pfaName || '',
+            rsaPin: emp.rsaPin || '',
+            nhisNumber: emp.nhisNumber || '',
+          }
+          const empIdentifications = {
+            bvn: emp.bvn || '',
+            passportPhotograph: emp.passportPhotograph || '',
+            fingerprints: emp.fingerprints || '',
+            digitalSignatures: emp.digitalSignatures || '',
+          }
+          const empDocuments = emp.documents || {}
+          const empNewDocuments = emp.newDocuments || {}
+          const empMedical = {
+            bloodType: emp.bloodType || '',
+            allergies: emp.allergies || '',
+            emergencyContact: emp.emergencyContact || '',
+            medicalHistory: emp.medicalHistory || '',
+          }
+          const empBank = {
+            accountNumber: emp.accountNumber || '',
+            bankName: emp.bankName || '',
+            branch: emp.branch || '',
+            ifscCode: emp.ifscCode || '',
+          }
+          const empEducation = {
+            degree: emp.degree || '',
+            educationInstitution: emp.educationInstitution || '',
+            yearOfPassing: emp.yearOfPassing || '',
+            finalGrade: emp.finalGrade || '',
+          }
+          const savedData = existing.rawVerificationData || {}
+          setVerificationData({
+            basic: { ...empBasic, ...savedData.basic },
+            employment: { ...empEmployment, ...savedData.employment },
+            educational: { ...empEducational, ...savedData.educational },
+            payment: { ...empPayment, ...savedData.payment },
+            identifications: {
+              ...empIdentifications,
+              ...savedData.identifications,
+            },
+            documents: { ...empDocuments, ...savedData.documents },
+            newDocuments: { ...empNewDocuments, ...savedData.newDocuments },
+            medical: { ...empMedical, ...savedData.medical },
+            bank: { ...empBank, ...savedData.bank },
+            education: { ...empEducation, ...savedData.education },
+          })
+          // Load issues, verify, and assignedDocuments from verificationData
+          const tabMap = {
+            'basic-info': 'basic',
+            'employment-details': 'employment',
+            'educational-qualifications': 'educational',
+            'payment-salary-record': 'payment',
+            'identifications-biometrics': 'identifications',
+            documents: 'documents',
+            'new-documents': 'newDocuments',
+          }
+
+          const loadedIssues: { [key: string]: { [field: string]: string[] } } =
+            {}
+          const loadedVerify: { [key: string]: { [field: string]: boolean } } =
+            {}
+          const loadedAssignedDocuments: {
+            [key: string]: { [field: string]: string[] }
+          } = {}
+
+          Object.keys(existing.verificationData).forEach((tabKey) => {
+            const stateKey = tabMap[tabKey as keyof typeof tabMap]
+            if (stateKey) {
+              loadedIssues[stateKey] = {}
+              loadedVerify[stateKey] = {}
+              loadedAssignedDocuments[stateKey] = {}
+              Object.keys(existing.verificationData[tabKey]).forEach(
+                (field) => {
+                  const fieldData = existing.verificationData[tabKey][field]
+                  loadedIssues[stateKey][field] = fieldData.tags || []
+                  loadedVerify[stateKey][field] = fieldData.verify === 1
+                  loadedAssignedDocuments[stateKey][field] =
+                    fieldData.document_proof || []
+                }
+              )
             }
-          )
-          setIssues(existing.issues || {})
-          setVerify(existing.verify || {})
+          })
+
+          setIssues(loadedIssues)
+          setAssignedDocuments(loadedAssignedDocuments)
+          setVerify(loadedVerify)
           setActiveTab(existing.lastTab || 'basic')
           setBiometricVerified(false)
           setBiometricStep(existing.biometricStep || 'facial')
@@ -960,6 +1016,8 @@ export default function AddVerification() {
       }
 
       const payload = {
+        ippsId: exceptionData.ippsId,
+        idnumber: exceptionData.idnumber,
         firstName: exceptionData.firstName,
         lastName: exceptionData.lastName,
         dateOfBirth: exceptionData.dateOfBirth,
@@ -969,6 +1027,7 @@ export default function AddVerification() {
         organisation: exceptionData.organisation,
         tags: exceptionData.tags,
         submittedAt: new Date().toISOString(),
+        sync: '1',
         submittedBy,
       }
       await pb.collection('exception_logs').create(payload)
@@ -979,6 +1038,7 @@ export default function AddVerification() {
         setExceptionData({
           ippsId: '',
           firstName: '',
+          idnumber: '',
           lastName: '',
           dateOfBirth: '',
           email: '',
@@ -1005,43 +1065,50 @@ export default function AddVerification() {
           'basic',
           verificationData.basic,
           issues.basic || {},
-          verify.basic || {}
+          verify.basic || {},
+          assignedDocuments.basic || {}
         ),
         'employment-details': transformTabData(
           'employment',
           verificationData.employment,
           issues.employment || {},
-          verify.employment || {}
+          verify.employment || {},
+          assignedDocuments.employment || {}
         ),
         'educational-qualifications': transformTabData(
           'educational',
           verificationData.educational,
           issues.educational || {},
-          verify.educational || {}
+          verify.educational || {},
+          assignedDocuments.educational || {}
         ),
         'payment-salary-record': transformTabData(
           'payment',
           verificationData.payment,
           issues.payment || {},
-          verify.payment || {}
+          verify.payment || {},
+          assignedDocuments.payment || {}
         ),
         'identifications-biometrics': transformTabData(
           'identifications',
           verificationData.identifications,
           issues.identifications || {},
-          verify.identifications || {}
+          verify.identifications || {},
+          assignedDocuments.identifications || {}
         ),
         documents: transformTabData(
           'documents',
           verificationData.documents,
           issues.documents || {},
-          verify.documents || {}
+          verify.documents || {},
+          assignedDocuments.documents || {}
         ),
         'new-documents': transformTabData(
           'newDocuments',
           verificationData.newDocuments,
           issues.newDocuments || {},
-          verify.newDocuments || {}
+          verify.newDocuments || {},
+          assignedDocuments.newDocuments || {}
         ),
       }
 
@@ -1195,6 +1262,7 @@ export default function AddVerification() {
         },
       })
       setIssues({})
+      setAssignedDocuments({})
       setShowIssueSelect({})
       setVerify({})
       setActiveTab('basic')
@@ -1218,43 +1286,50 @@ export default function AddVerification() {
           'basic',
           verificationData.basic,
           issues.basic || {},
-          verify.basic || {}
+          verify.basic || {},
+          assignedDocuments.basic || {}
         ),
         'employment-details': transformTabData(
           'employment',
           verificationData.employment,
           issues.employment || {},
-          verify.employment || {}
+          verify.employment || {},
+          assignedDocuments.employment || {}
         ),
         'educational-qualifications': transformTabData(
           'educational',
           verificationData.educational,
           issues.educational || {},
-          verify.educational || {}
+          verify.educational || {},
+          assignedDocuments.educational || {}
         ),
         'payment-salary-record': transformTabData(
           'payment',
           verificationData.payment,
           issues.payment || {},
-          verify.payment || {}
+          verify.payment || {},
+          assignedDocuments.payment || {}
         ),
         'identifications-biometrics': transformTabData(
           'identifications',
           verificationData.identifications,
           issues.identifications || {},
-          verify.identifications || {}
+          verify.identifications || {},
+          assignedDocuments.identifications || {}
         ),
         documents: transformTabData(
           'documents',
           verificationData.documents,
           issues.documents || {},
-          verify.documents || {}
+          verify.documents || {},
+          assignedDocuments.documents || {}
         ),
         'new-documents': transformTabData(
           'newDocuments',
           verificationData.newDocuments,
           issues.newDocuments || {},
-          verify.newDocuments || {}
+          verify.newDocuments || {},
+          assignedDocuments.newDocuments || {}
         ),
       }
 
@@ -1286,6 +1361,7 @@ export default function AddVerification() {
         dobInput,
         dobResult,
         issues,
+        assignedDocuments,
         verify,
         lastTab: activeTab,
         status: 'pending',
@@ -1422,8 +1498,9 @@ export default function AddVerification() {
   const transformTabData = (
     tabKey: string,
     tabData: Record<string, string>,
-    tabIssues: Record<string, string[]>,
-    tabVerify: Record<string, boolean>
+    tabIssues: Record<string, IssueType>,
+    tabVerify: Record<string, boolean>,
+    tabAssignedDocuments: Record<string, string[]>
   ) => {
     const result: Record<
       string,
@@ -1431,13 +1508,23 @@ export default function AddVerification() {
     > = {}
 
     Object.keys(tabData).forEach((field) => {
-      const fieldIssues = tabIssues[field] || []
+      const fieldIssues = tabIssues[field]
       const fieldVerify = tabVerify[field] ? 1 : 0
+
+      let tags: string[] = []
+      let document_prove: string[] = []
+
+      if (Array.isArray(fieldIssues)) {
+        tags = fieldIssues
+      } else if (fieldIssues && typeof fieldIssues === 'object') {
+        tags = fieldIssues.tags || []
+        document_prove = fieldIssues.document_proof || []
+      }
 
       result[field] = {
         verify: fieldVerify,
-        tags: fieldIssues,
-        document_proof: [], // This would need to be populated from assignedDocuments if available
+        tags,
+        document_proof: tabAssignedDocuments[field] || [],
       }
     })
 
@@ -2080,6 +2167,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, basic: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.basic || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        basic: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.basic || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({ ...showIssueSelect, basic: newShow })
@@ -2111,6 +2205,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, employment: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.employment || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        employment: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.employment || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({
@@ -2120,6 +2221,13 @@ export default function AddVerification() {
                     }
                     possibleIssues={possibleIssues}
                     ippsId={ippsId}
+                    verify={verify.employment || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        employment: { ...verify.employment, [field]: value },
+                      })
+                    }
                   />
                 )}
                 {activeTab === 'educational' && (
@@ -2138,6 +2246,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, educational: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.educational || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        educational: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.educational || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({
@@ -2147,6 +2262,13 @@ export default function AddVerification() {
                     }
                     possibleIssues={possibleIssues}
                     ippsId={ippsId}
+                    verify={verify.educational || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        educational: { ...verify.educational, [field]: value },
+                      })
+                    }
                   />
                 )}
                 {activeTab === 'payment' && (
@@ -2165,6 +2287,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, payment: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.payment || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        payment: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.payment || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({
@@ -2174,6 +2303,13 @@ export default function AddVerification() {
                     }
                     possibleIssues={possibleIssues}
                     ippsId={ippsId}
+                    verify={verify.payment || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        payment: { ...verify.payment, [field]: value },
+                      })
+                    }
                   />
                 )}
                 {activeTab === 'identifications' && (
@@ -2192,6 +2328,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, identifications: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.identifications || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        identifications: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.identifications || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({
@@ -2201,6 +2344,16 @@ export default function AddVerification() {
                     }
                     possibleIssues={possibleIssues}
                     ippsId={ippsId}
+                    verify={verify.identifications || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        identifications: {
+                          ...verify.identifications,
+                          [field]: value,
+                        },
+                      })
+                    }
                   />
                 )}
                 {activeTab === 'documents' && (
@@ -2219,6 +2372,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, documents: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.documents || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        documents: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.documents || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({
@@ -2228,6 +2388,13 @@ export default function AddVerification() {
                     }
                     possibleIssues={possibleIssues}
                     ippsId={ippsId}
+                    verify={verify.documents || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        documents: { ...verify.documents, [field]: value },
+                      })
+                    }
                   />
                 )}
                 {activeTab === 'newDocuments' && (
@@ -2246,6 +2413,13 @@ export default function AddVerification() {
                     setIssues={(newIssues) =>
                       setIssues({ ...issues, newDocuments: newIssues })
                     }
+                    assignedDocuments={assignedDocuments.newDocuments || {}}
+                    setAssignedDocuments={(docs) =>
+                      setAssignedDocuments({
+                        ...assignedDocuments,
+                        newDocuments: docs,
+                      })
+                    }
                     showIssueSelect={showIssueSelect.newDocuments || {}}
                     setShowIssueSelect={(newShow) =>
                       setShowIssueSelect({
@@ -2255,6 +2429,16 @@ export default function AddVerification() {
                     }
                     possibleIssues={possibleIssues}
                     ippsId={ippsId}
+                    verify={verify.newDocuments || {}}
+                    onVerifyChange={(field, value) =>
+                      setVerify({
+                        ...verify,
+                        newDocuments: {
+                          ...verify.newDocuments,
+                          [field]: value,
+                        },
+                      })
+                    }
                   />
                 )}
                 {/* {activeTab === 'medical' && (
@@ -2370,6 +2554,18 @@ export default function AddVerification() {
                     setExceptionData({
                       ...exceptionData,
                       ippsId: e.target.value,
+                    })
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                />
+                <input
+                  type='text'
+                  placeholder='ID NUMBER'
+                  value={exceptionData.idnumber}
+                  onChange={(e) =>
+                    setExceptionData({
+                      ...exceptionData,
+                      idnumber: e.target.value,
                     })
                   }
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
@@ -2569,6 +2765,10 @@ export default function AddVerification() {
           </div>
         </div>
       )}
+      <div className='mt-8 flex items-center justify-center'>
+        <span className='text-sm text-gray-500 mr-4'>Powered By:</span>
+        <Image src={PemsoftLogo} alt='PEMSOFT Logo' className='w-28 h-auto' />
+      </div>
     </div>
   )
 }
