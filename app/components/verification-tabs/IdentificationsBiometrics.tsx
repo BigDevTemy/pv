@@ -56,7 +56,7 @@ export default function IdentificationsBiometrics({
 
   useEffect(() => {
     setInitialData(data)
-  }, [])
+  }, [data])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,7 +72,7 @@ export default function IdentificationsBiometrics({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
 
   return (
     <>

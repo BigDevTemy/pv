@@ -2,7 +2,6 @@
 import Image from 'next/image'
 import Logo1m from '../images/logo-1.png'
 import { useState } from 'react'
-import Swal from 'sweetalert2'
 import pb from '@/lib/pb'
 import { useRouter } from 'next/navigation'
 import Alert from '../components/Alert'

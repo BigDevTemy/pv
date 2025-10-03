@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
-import api from '../Serverurls'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import pb from '@/lib/pb'
 import DocumentsModal from './DocumentsModal'
 
@@ -39,7 +38,6 @@ interface Props {
 }
 
 export default function Documents({
-  data,
   onChange,
   issues,
   setIssues,
@@ -53,9 +51,9 @@ export default function Documents({
   onVerifyChange,
   currentUserId,
 }: Props) {
-  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
+  const [documentTypes] = useState<DocumentType[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadedDocuments, setUploadedDocuments] = useState<
     UploadedDocument[]
@@ -63,7 +61,7 @@ export default function Documents({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [currentField, setCurrentField] = useState('')
+  const [currentField] = useState('')
   const [documentName, setDocumentName] = useState('')
   const [documentType, setDocumentType] = useState('')
   const filteredIssues = useMemo(
@@ -89,27 +87,9 @@ export default function Documents({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
 
-  // useEffect(() => {
-  //   const fetchDocumentTypes = async () => {
-  //     try {
-  //       const response = await api.get('/collections/document_types/records')
-  //       setDocumentTypes(response.data.items || [])
-  //     } catch (err: any) {
-  //       setError('Failed to load document types')
-  //     } finally {
-  //       setLoading(false)
-  //     }
-  //   }
-  //   fetchDocumentTypes()
-  // }, [])
-
-  useEffect(() => {
-    fetchUploadedDocuments()
-  }, [ippsId])
-
-  const fetchUploadedDocuments = async () => {
+  const fetchUploadedDocuments = useCallback(async () => {
     try {
       const records = await pb.collection('documents').getFullList({
         filter: `ippsId = "${ippsId}"`,
@@ -120,7 +100,11 @@ export default function Documents({
       setLoading(false)
       console.error('Failed to fetch documents:', error)
     }
-  }
+  }, [ippsId])
+
+  useEffect(() => {
+    fetchUploadedDocuments()
+  }, [fetchUploadedDocuments])
 
   const handleFileUpload = async () => {
     if (!selectedFile || !documentName || !documentType) return

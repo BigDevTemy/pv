@@ -2,17 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import DocumentsModal from './DocumentsModal'
 import Warning from '@mui/icons-material/Warning'
 import MoreHoriz from '@mui/icons-material/MoreHoriz'
-import Check from '@mui/icons-material/Check'
-import {
-  Add,
-  AttachFile,
-  DocumentScanner,
-  DocumentScannerOutlined,
-  DocumentScannerSharp,
-  Upload,
-  UploadFile,
-  UploadOutlined,
-} from '@mui/icons-material'
+import { AttachFile, UploadFile } from '@mui/icons-material'
+import Image from 'next/image'
 interface Props {
   data: { [key: string]: string }
   onChange: (field: string, value: string) => void
@@ -69,7 +60,7 @@ export default function BasicInfo({
 
   useEffect(() => {
     setInitialData(data)
-  }, [])
+  }, [data])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -85,7 +76,7 @@ export default function BasicInfo({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
   const filteredIssues = useMemo(
     () =>
       possibleIssues.filter((issue) =>
@@ -105,17 +96,21 @@ export default function BasicInfo({
     <>
       {data.photo ? (
         <div className='text-center mb-6'>
-          <img
+          <Image
             src={data.profilePic}
             alt='Profile'
+            width={160}
+            height={160}
             className='w-40 h-40 rounded-full mx-auto bg-gray-200'
           />
         </div>
       ) : (
         <div className='text-center mb-6'>
-          <img
+          <Image
             src={data.profilePic}
             alt='Profile'
+            width={160}
+            height={160}
             className='w-40 h-40 rounded-full mx-auto bg-gray-200'
           />
         </div>

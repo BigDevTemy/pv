@@ -35,8 +35,6 @@ interface Props {
 }
 
 export default function NewEmployeeDocuments({
-  data,
-  onChange,
   issues,
   setIssues,
   assignedDocuments,
@@ -76,7 +74,7 @@ export default function NewEmployeeDocuments({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
   const [newDoc, setNewDoc] = useState<CustomDocument>({
     type: '',
     name: '',

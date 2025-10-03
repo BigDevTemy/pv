@@ -4,7 +4,6 @@ import Logo1m from '../images/logo-me.png'
 import PemsoftLogo from '../images/pemsoft-logo.png'
 import { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
-import api, { LOGIN } from './Serverurls'
 import { useRouter } from 'next/navigation'
 import Alert from './Alert'
 import pb from '@/lib/pb'
@@ -329,9 +328,11 @@ export default function Login() {
               >
                 <div className='flex items-center'>
                   <div className='relative'>
-                    <img
+                    <Image
                       src={user.avatar}
                       alt={user.name}
+                      width={56}
+                      height={56}
                       className='w-14 h-14 rounded-full border-2 border-gray-100 group-hover:border-primaryy transition-colors'
                     />
                     <div className='absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full'></div>
@@ -399,9 +400,11 @@ export default function Login() {
         <div className='space-y-6'>
           <div className='text-center'>
             <div className='relative inline-block'>
-              <img
+              <Image
                 src={currentUser.avatar}
                 alt={currentUser.name}
+                width={80}
+                height={80}
                 className='w-20 h-20 rounded-full border-4 border-white shadow-lg'
               />
               <div className='absolute -bottom-1 -right-1 w-6 h-6 bg-green-400 border-2 border-white rounded-full'></div>
@@ -530,9 +533,11 @@ export default function Login() {
       return (
         <div className='space-y-4'>
           <div className='text-center'>
-            <img
+            <Image
               src={currentUser.avatar}
               alt={currentUser.name}
+              width={80}
+              height={80}
               className='w-20 h-20 rounded-full mx-auto'
             />
             <p className='text-xl font-semibold text-gray-900 mt-2'>
@@ -581,7 +586,7 @@ export default function Login() {
       </div>
       <div className='mt-1 text-center absolute bottom-0.5'>
         <div className='flex items-center justify-center'>
-          <span className='text-sm text-gray-500 mr-4'>Powered By:</span>
+          <span className='text-sm text-gray-500'>Powered By:</span>
           <Image src={PemsoftLogo} alt='PEMSOFT Logo' className='w-28 h-auto' />
         </div>
       </div>

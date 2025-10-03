@@ -81,7 +81,7 @@ export default function EmploymentDetails({
 
   useEffect(() => {
     setInitialData(data)
-  }, [])
+  }, [data])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,7 +97,7 @@ export default function EmploymentDetails({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
 
   //org,ref_id, joblocation,jobtitle,position,step_sum18,hiredate,taxstate,ste_of_origin,confirmation_date,qualification
 

@@ -7,6 +7,7 @@
     "pocketbase": "cd pocketbase && pocketbase serve --http=0.0.0.0:8090",
     "migrate": "cd pocketbase && .\\pocketbase.exe migrate up",
     "build": "next build --turbopack",
+    "export": "next export",
     "start": "next start",
     "lint": "eslint",
     "sync-worker": "node --loader tsx scripts/sync-worker.ts",

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import pb from '@/lib/pb'
 
 interface Document {
@@ -40,9 +40,22 @@ export default function DocumentsModal({
   const [documentName, setDocumentName] = useState('')
   const [documentType, setDocumentType] = useState('')
   const [scanning, setScanning] = useState(false)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+
+  const fetchDocuments = useCallback(async () => {
+    setLoading(true)
+    try {
+      const records = await pb.collection('documents').getFullList({
+        filter: `ippsId = "${ippsId}"`,
+      })
+      setDocuments(records as unknown as Document[])
+    } catch (error) {
+      console.error('Failed to fetch documents:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [ippsId])
 
   useEffect(() => {
     if (isOpen) {
@@ -54,7 +67,7 @@ export default function DocumentsModal({
         loadScanner()
       }
     }
-  }, [isOpen, activeTab, ippsId])
+  }, [isOpen, activeTab, ippsId, fetchDocuments])
 
   // Cleanup scanner on unmount or tab change
   useEffect(() => {
@@ -137,7 +150,6 @@ export default function DocumentsModal({
       // Reset form
       setDocumentName('')
       setDocumentType('')
-      setCapturedImage(null)
       stopScanner()
 
       onClose()
@@ -166,20 +178,6 @@ export default function DocumentsModal({
   //     }
   //   })
   // }
-
-  const fetchDocuments = async () => {
-    setLoading(true)
-    try {
-      const records = await pb.collection('documents').getFullList({
-        filter: `ippsId = "${ippsId}"`,
-      })
-      setDocuments(records as unknown as Document[])
-    } catch (error) {
-      console.error('Failed to fetch documents:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleFileUpload = async () => {
     if (!selectedFile || !documentName || !documentType) return

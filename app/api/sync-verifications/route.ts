@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { syncVerificationsToCloud } from '@/lib/sync-verifications'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     await syncVerificationsToCloud()
     return NextResponse.json({ success: true, message: 'Sync completed' })

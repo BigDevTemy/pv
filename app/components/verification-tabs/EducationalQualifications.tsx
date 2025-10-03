@@ -57,7 +57,7 @@ export default function EducationalQualifications({
 
   useEffect(() => {
     setInitialData(data)
-  }, [])
+  }, [data])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,7 +73,7 @@ export default function EducationalQualifications({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
 
   return (
     <>

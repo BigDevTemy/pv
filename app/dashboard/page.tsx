@@ -1,12 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import pb from '@/lib/pb'
-import { addCronJob } from '@/lib/addCronJob'
-import { start } from 'repl'
 import Image from 'next/image'
 import Logo from '../images/logo-me.png'
 import PemsoftLogo from '../images/pemsoft-logo.png'
@@ -15,12 +13,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import HourglassEmpty from '@mui/icons-material/HourglassEmpty'
 import Celebration from '@mui/icons-material/Celebration'
 import Inbox from '@mui/icons-material/Inbox'
-import Cancel from '@mui/icons-material/Cancel'
-import {
-  CloudDone,
-  CloudDoneOutlined,
-  CloudOffOutlined,
-} from '@mui/icons-material'
+import { CloudDoneOutlined, CloudOffOutlined } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 
 interface User {
@@ -75,26 +68,10 @@ export default function Dashboard() {
     }
   }, [router])
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchVerifications()
-    }
-  }, [startDate, endDate, perPage, currentUser])
-
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('currentUser')
-    localStorage.removeItem('pb_auth')
-    localStorage.removeItem('user')
-
-    router.push('/login')
-  }
-
-  const fetchVerifications = async () => {
+  const fetchVerifications = useCallback(async () => {
     setLoading(true)
     const userx = localStorage.getItem('currentUser')
     console.log(userx, userx ? JSON.parse(userx) : null)
-    const userId = userx ? JSON.parse(userx).user_id : ''
 
     console.log('useridxxxx', userx)
     try {
@@ -160,6 +137,21 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }, [startDate, endDate, perPage])
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchVerifications()
+    }
+  }, [fetchVerifications, currentUser])
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('currentUser')
+    localStorage.removeItem('pb_auth')
+    localStorage.removeItem('user')
+
+    router.push('/login')
   }
   console.log('currentUserxxx', currentUser?.user_id, currentUser)
 

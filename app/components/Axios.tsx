@@ -14,8 +14,8 @@ export default function Axios() {
     try {
       const res = await api.get('/test') // Replace with actual endpoint
       setResponse(res.data)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }

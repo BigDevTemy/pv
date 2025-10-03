@@ -63,7 +63,7 @@ export default function PaymentSalaryRecord({
 
   useEffect(() => {
     setInitialData(data)
-  }, [])
+  }, [data])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -79,7 +79,7 @@ export default function PaymentSalaryRecord({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [setShowIssueSelect])
 
   return (
     <>

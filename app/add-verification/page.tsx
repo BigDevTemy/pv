@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+
+export const dynamic = 'force-dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Alert from '../components/Alert'
-import api from '../components/Serverurls'
 import BasicInfo from '../components/verification-tabs/BasicInfo'
 import EmploymentDetails from '../components/verification-tabs/EmploymentDetails'
 import EducationalQualifications from '../components/verification-tabs/EducationalQualifications'
@@ -16,7 +17,6 @@ import pb from '@/lib/pb'
 import ArrowBack from '@mui/icons-material/ArrowBack'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import Close from '@mui/icons-material/Close'
-import { Face, FaceOutlined } from '@mui/icons-material'
 import Logo1m from '../images/logo-me.png'
 import PemsoftLogo from '../images/pemsoft-logo.png'
 import Image from 'next/image'
@@ -41,7 +41,7 @@ interface OrgDep {
 
 type IssueType = string[] | { tags: string[]; document_proof: string[] }
 
-export default function AddVerification() {
+function AddVerificationComponent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [ippsId, setIppsId] = useState('')
@@ -195,186 +195,6 @@ export default function AddVerification() {
     // { key: 'bank', label: 'Bank Information' },
     // { key: 'education', label: 'Education Records' },
   ]
-  // Sample employees for local UI testing and prepopulation
-  const SAMPLE_EMPLOYEES = {
-    '12345': {
-      meta: {
-        id: '1',
-        ippsId: '12345',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        department: 'IT',
-      },
-      basic: {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1988-05-14',
-        gender: 'Male',
-        maritalStatus: 'Single',
-        nationality: 'Nigerian',
-        stateOfOrigin: 'Lagos',
-        lga: 'Ikeja',
-        phoneNumber: '08030000000',
-        email: 'john.doe@example.com',
-        residentialAddress: '12 Adewale St, Ikeja',
-        nextOfKin: 'Jane Doe',
-        nextOfKinRelationship: 'Sister',
-        profilePic: '',
-      },
-      employment: {
-        dateOfFirstAppointment: '2012-01-10',
-        currentAppointment: 'Senior Developer',
-        designation: 'Software Engineer',
-        gradeLevel: '12',
-        grade: 'Step 3',
-        mda: 'IT Services',
-        cdre: 'CDRE-123',
-        dateOfConfirmation: '2014-03-01',
-        expectedRetirementDate: '2048-05-14',
-        dateOfLastPromotion: '2022-08-01',
-      },
-      educational: {
-        highestQualification: 'B.Sc Computer Science',
-        institutionAttended: 'UNILAG',
-        yearOfGraduation: '2010',
-        professionalCertifications: 'PMP, AWS SAA',
-        trainingAttended: 'Secure Coding',
-      },
-      payment: {
-        salaryStructure: 'CONIT',
-        basicSalary: '350000',
-        allowances: '150000',
-        deductions: '50000',
-        netPay: '450000',
-        accountNumber: '0123456789',
-        bvn: '12345678901',
-        pfaName: 'ARM Pensions',
-        rsaPin: 'PEN123456',
-        nhisNumber: 'NHIS123456',
-      },
-      identifications: {
-        bvn: '12345678901',
-        passportPhotograph: '',
-        fingerprints: '',
-        digitalSignatures: '',
-      },
-      documents: {},
-      newDocuments: {},
-      medical: {
-        bloodType: 'O+',
-        allergies: 'None',
-        emergencyContact: 'Jane Doe',
-        medicalHistory: 'N/A',
-      },
-      bank: {
-        accountNumber: '0123456789',
-        bankName: 'GTBank',
-        branch: 'Ikeja',
-        ifscCode: '',
-      },
-      education: {
-        degree: 'B.Sc',
-        institution: 'UNILAG',
-        yearOfPassing: '2010',
-        grade: 'First Class',
-      },
-    },
-    '67890': {
-      meta: {
-        id: '2',
-        ippsId: '67890',
-        name: 'Mary Johnson',
-        email: 'mary.johnson@example.com',
-        department: 'Finance',
-      },
-      basic: {
-        firstName: 'Mary',
-        lastName: 'Johnson',
-        dateOfBirth: '1990-09-21',
-        gender: 'Female',
-        maritalStatus: 'Married',
-        nationality: 'Nigerian',
-        stateOfOrigin: 'Oyo',
-        lga: 'Ibadan North',
-        phoneNumber: '08030000001',
-        email: 'mary.johnson@example.com',
-        residentialAddress: '3 Ring Road, Ibadan',
-        nextOfKin: 'Paul Johnson',
-        nextOfKinRelationship: 'Husband',
-        profilePic: '',
-      },
-      employment: {
-        dateOfFirstAppointment: '2015-06-01',
-        currentAppointment: 'Accountant',
-        designation: 'Senior Accountant',
-        gradeLevel: '10',
-        grade: 'Step 2',
-        mda: 'Finance Dept',
-        cdre: 'CDRE-456',
-        dateOfConfirmation: '2017-01-01',
-        expectedRetirementDate: '2055-09-21',
-        dateOfLastPromotion: '2021-05-15',
-      },
-      educational: {
-        highestQualification: 'M.Sc Accounting',
-        institutionAttended: 'UI',
-        yearOfGraduation: '2014',
-        professionalCertifications: 'ICAN',
-        trainingAttended: 'IFRS',
-      },
-      payment: {
-        salaryStructure: 'CONF',
-        basicSalary: '300000',
-        allowances: '120000',
-        deductions: '40000',
-        netPay: '380000',
-        accountNumber: '0123456790',
-        bvn: '10987654321',
-        pfaName: 'Stanbic Pensions',
-        rsaPin: 'PEN654321',
-        nhisNumber: 'NHIS654321',
-      },
-      identifications: {
-        bvn: '10987654321',
-        passportPhotograph: '',
-        fingerprints: '',
-        digitalSignatures: '',
-      },
-      documents: {},
-      newDocuments: {},
-      medical: {
-        bloodType: 'A-',
-        allergies: 'Penicillin',
-        emergencyContact: 'Paul Johnson',
-        medicalHistory: 'Asthma',
-      },
-      bank: {
-        accountNumber: '0123456790',
-        bankName: 'Access Bank',
-        branch: 'Bodija',
-        ifscCode: '',
-      },
-      education: {
-        degree: 'M.Sc',
-        institution: 'UI',
-        yearOfPassing: '2014',
-        grade: 'Distinction',
-      },
-    },
-  } as const
-
-  // duplicate SAMPLE_EMPLOYEES removed
-
-  useEffect(() => {
-    const ippsIdParam = searchParams.get('ippsId')
-    if (!hasHandledIppsId && ippsIdParam && !employee) {
-      setHasHandledIppsId(true)
-      setIppsId(ippsIdParam)
-      setSkipIppsInput(true)
-      // Trigger handleCheck after setting ippsId
-      handleCheck(ippsIdParam)
-    }
-  }, [searchParams])
 
   useEffect(() => {
     const currentUserStr = localStorage.getItem('currentUser')
@@ -696,6 +516,7 @@ export default function AddVerification() {
   //   }
   // }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleCheck = async (ippsParams: string | null = null) => {
     // choose the ippsId to use
     const idToCheck = ippsParams || ippsId?.trim()
@@ -1006,6 +827,17 @@ export default function AddVerification() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const ippsIdParam = searchParams.get('ippsId')
+    if (!hasHandledIppsId && ippsIdParam && !employee) {
+      setHasHandledIppsId(true)
+      setIppsId(ippsIdParam)
+      setSkipIppsInput(true)
+      // Trigger handleCheck after setting ippsId
+      handleCheck(ippsIdParam)
+    }
+  }, [searchParams, hasHandledIppsId, employee, handleCheck])
 
   const handleAddException = async () => {
     try {
@@ -1521,6 +1353,7 @@ export default function AddVerification() {
       const fieldVerify = tabVerify[field] ? 1 : 0
 
       let tags: string[] = []
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let document_prove: string[] = []
 
       if (Array.isArray(fieldIssues)) {
@@ -1556,151 +1389,6 @@ export default function AddVerification() {
   //     handleVerificationSubmit()
   //   }
   // }
-
-  const renderForm = () => {
-    const tabs = [
-      { key: 'basic', label: 'Basic Information' },
-      { key: 'employment', label: 'Employment Details' },
-      { key: 'educational', label: 'Educational Qualifications' },
-      { key: 'payment', label: 'Payment/Salary Record' },
-      { key: 'identifications', label: 'Identifications/Biometrics' },
-      { key: 'documents', label: 'Documents' },
-      { key: 'newDocuments', label: 'New Employee Documents' },
-      { key: 'medical', label: 'Medical Information' },
-      { key: 'bank', label: 'Bank Information' },
-      { key: 'education', label: 'Education Records' },
-    ]
-
-    const currentData =
-      verificationData[activeTab as keyof typeof verificationData]
-
-    const currentTabIndex = tabs.findIndex((tab) => tab.key === activeTab)
-    const isLastTab = currentTabIndex === tabs.length - 1
-
-    const handleNext = () => {
-      if (isLastTab) {
-        handleVerificationSubmit()
-      } else {
-        setActiveTab(tabs[currentTabIndex + 1].key)
-      }
-    }
-
-    return (
-      <div className='flex'>
-        {/* Vertical Tabs */}
-        <div className='w-1/3 pr-4'>
-          <div className='space-y-2'>
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`w-full text-left px-2 py-2 rounded-lg font-medium ${
-                  activeTab === tab.key
-                    ? 'bg-primaryy text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <div className='w-3/4 ml-4'>
-          {activeTab === 'basic' && verificationData.basic.profilePic && (
-            <div className='text-center mb-6'>
-              <img
-                src={verificationData.basic.profilePic}
-                alt='Profile'
-                className='w-40 h-40 rounded-full mx-auto bg-black/60'
-              />
-            </div>
-          )}
-          <div className='space-y-4'>
-            {Object.keys(currentData).map((field) => (
-              <div key={field}>
-                <label className='block text-sm font-medium text-gray-700 mb-1 capitalize'>
-                  {field.replace(/([A-Z])/g, ' $1').trim()}
-                </label>
-                {field === 'profilePic' ? (
-                  <input
-                    type='file'
-                    accept='image/*'
-                    onChange={(e) =>
-                      setVerificationData({
-                        ...verificationData,
-                        [activeTab]: {
-                          ...currentData,
-                          [field]: e.target.files?.[0]?.name || '',
-                        },
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-                  />
-                ) : (
-                  <input
-                    type={
-                      field.includes('email')
-                        ? 'email'
-                        : field.includes('phone')
-                        ? 'tel'
-                        : 'text'
-                    }
-                    value={(currentData as Record<string, string>)[field] ?? ''}
-                    onChange={(e) =>
-                      setVerificationData({
-                        ...verificationData,
-                        [activeTab]: {
-                          ...currentData,
-                          [field]: e.target.value,
-                        },
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
-                    placeholder={`Enter ${field
-                      .replace(/([A-Z])/g, ' $1')
-                      .trim()}`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className='w-full flex justify-between mt-6'>
-            <button
-              onClick={() => {
-                const currentIndex = tabs.findIndex(
-                  (tab) => tab.key === activeTab
-                )
-                if (currentIndex > 0) {
-                  setActiveTab(tabs[currentIndex - 1].key)
-                }
-              }}
-              disabled={tabs.findIndex((tab) => tab.key === activeTab) === 0}
-              className='px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Previous
-            </button>
-            <button
-              onClick={handleNext}
-              className='px-6 py-2 bg-primaryy text-white rounded-md hover:bg-primaryx'
-            >
-              {isLastTab ? 'Submit Verification' : 'Next'}
-            </button>
-            <button
-              onClick={() => handleSaveProgress()}
-              className='px-6 py-2 text-white rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-opacity duration-200'
-              style={{ backgroundColor: '#ffc107' }}
-            >
-              Save Progress
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className='min-h-screen bg-gray-50 p-4 md:p-8'>
@@ -2786,5 +2474,13 @@ export default function AddVerification() {
         <Image src={PemsoftLogo} alt='PEMSOFT Logo' className='w-28 h-auto' />
       </div>
     </div>
+  )
+}
+
+export default function AddVerification() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AddVerificationComponent />
+    </Suspense>
   )
 }
