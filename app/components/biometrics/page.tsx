@@ -19,6 +19,7 @@ export default function Biometrics({
     useState<Float32Array | null>(null)
   const [loadingReference, setLoadingReference] = useState(false)
   const [verifying, setVerifying] = useState(false)
+  const [processing, setProcessing] = useState(false)
   const [photoNotFound, setPhotoNotFound] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -63,6 +64,7 @@ export default function Biometrics({
     if (ippsId && isModelLoaded) {
       const loadReference = async () => {
         setLoadingReference(true)
+        setProcessing(true)
         try {
           const employees = await pb.collection('employees').getFullList({
             filter: `ippsId = "${ippsId}"`,
@@ -78,6 +80,7 @@ export default function Biometrics({
                 .withFaceDescriptor()
               if (detection) {
                 setReferenceDescriptor(detection.descriptor)
+                setProcessing(false)
               } else {
                 setError('No face detected in employee photo.')
               }
@@ -120,7 +123,7 @@ export default function Biometrics({
         referenceDescriptor,
         liveDescriptor
       )
-      if (distance < 0.5) {
+      if (distance < 0.6) {
         setMessage('Face verification successful!')
         setTimeout(() => {
           onVerifySuccess?.()
@@ -179,7 +182,11 @@ export default function Biometrics({
             disabled={!referenceDescriptor || verifying}
             className='px-4 py-2 bg-green-500 text-white rounded-xl disabled:opacity-50'
           >
-            {verifying ? 'Verifying...' : 'Verify'}
+            {verifying
+              ? 'Verifying...'
+              : processing
+              ? 'Processing...'
+              : 'Verify'}
           </button>
         )}
       </div>

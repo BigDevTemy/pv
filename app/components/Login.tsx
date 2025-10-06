@@ -92,7 +92,7 @@ export default function Login() {
             setTimeout(() => {
               setMessage('Setting up local configuration...')
             }, 2000)
-
+            await pb.admins.authWithPassword('admin@ohcsf.com', 'admin12345')
             const existingRecords = await pb
               .collection('loggedInUsers')
               .getFullList({
@@ -242,7 +242,7 @@ export default function Login() {
             // After syncing, show success message, then navigate
             setMessage('Configuration successful')
             setTimeout(() => {
-              router.push('/dashboard')
+              router.push('/pages/dashboard/')
             }, 2000)
           } else {
             setError(data.message || 'Login failed. Please try again.')

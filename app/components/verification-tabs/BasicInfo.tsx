@@ -94,27 +94,15 @@ export default function BasicInfo({
   console.log('data', data)
   return (
     <>
-      {data.photo ? (
-        <div className='text-center mb-6'>
-          <Image
-            src={data.profilePic}
-            alt='Profile'
-            width={160}
-            height={160}
-            className='w-40 h-40 rounded-full mx-auto bg-gray-200'
-          />
-        </div>
-      ) : (
-        <div className='text-center mb-6'>
-          <Image
-            src={data.profilePic}
-            alt='Profile'
-            width={160}
-            height={160}
-            className='w-40 h-40 rounded-full mx-auto bg-gray-200'
-          />
-        </div>
-      )}
+      <div className='text-center mb-6'>
+        <Image
+          src={data.profilePic}
+          alt='Profile'
+          width={160}
+          height={160}
+          className='w-40 h-40 rounded-full mx-auto bg-gray-200'
+        />
+      </div>
       <div className='grid grid-cols-1 gap-4'>
         {fields.map((field) => (
           <div key={field} className='relative'>

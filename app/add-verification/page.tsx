@@ -39,6 +39,11 @@ interface OrgDep {
   name: string
 }
 
+interface RemoteEmployee {
+  name: string
+  organisation: string
+}
+
 type IssueType = string[] | { tags: string[]; document_proof: string[] }
 
 function AddVerificationComponent() {
@@ -76,6 +81,12 @@ function AddVerificationComponent() {
   const [skipIppsInput, setSkipIppsInput] = useState(false)
   const [hasHandledIppsId, setHasHandledIppsId] = useState(false)
   const [currentUserId, setCurrentUserId] = useState('')
+  const [showRemoteModal, setShowRemoteModal] = useState(false)
+  const [remoteLoading, setRemoteLoading] = useState(false)
+  const [remoteEmployee, setRemoteEmployee] = useState<RemoteEmployee | null>(
+    null
+  )
+  const [remoteError, setRemoteError] = useState('')
   const [biometricResults, setBiometricResults] = useState({
     facial: '',
     surname: '',
@@ -589,7 +600,7 @@ function AddVerificationComponent() {
             profilePic:
               emp.profilePic ||
               `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
-            photo: emp.photo || '',
+            photo: emp.photo ? pb.files.getUrl(emp, 'photo') : '',
           }
           const empEmployment = {
             dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
@@ -746,7 +757,7 @@ function AddVerificationComponent() {
               profilePic:
                 emp.profilePic ||
                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.email}`,
-              photo: emp.photo || '',
+              photo: emp.photo ? pb.files.getUrl(emp, 'photo') : '',
             },
             employment: {
               dateOfFirstAppointment: emp.dateOfFirstAppointment || '',
@@ -825,6 +836,32 @@ function AddVerificationComponent() {
       //setError('Failed to check employee. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRemoteCheck = async () => {
+    if (!ippsId.trim()) return
+
+    setRemoteLoading(true)
+    setRemoteError('')
+    setRemoteEmployee(null)
+    try {
+      // Placeholder API call - replace with actual remote server endpoint
+      // Example: const response = await fetch(`https://remote-api.example.com/check-ipps?ippsId=${ippsId}`)
+      // For now, simulate a call
+      const response = await fetch(
+        `https://jsonplaceholder.typicode.com/users/${ippsId}`
+      ) // Placeholder
+      if (!response.ok) throw new Error('Not found')
+      const data = await response.json()
+      setRemoteEmployee({
+        name: data.name,
+        organisation: data.company?.name || 'N/A', // Adjust based on actual API response
+      })
+    } catch {
+      setRemoteError('Employee not found or error occurred')
+    } finally {
+      setRemoteLoading(false)
     }
   }
 
@@ -1353,14 +1390,11 @@ function AddVerificationComponent() {
       const fieldVerify = tabVerify[field] ? 1 : 0
 
       let tags: string[] = []
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let document_prove: string[] = []
 
       if (Array.isArray(fieldIssues)) {
         tags = fieldIssues
       } else if (fieldIssues && typeof fieldIssues === 'object') {
         tags = fieldIssues.tags || []
-        document_prove = fieldIssues.document_proof || []
       }
 
       result[field] = {
@@ -1494,6 +1528,12 @@ function AddVerificationComponent() {
                   className='px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600'
                 >
                   Log Exception
+                </button>
+                <button
+                  onClick={() => setShowRemoteModal(true)}
+                  className='px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600'
+                >
+                  Check Across All CCs
                 </button>
               </div>
             </div>
@@ -2235,6 +2275,67 @@ function AddVerificationComponent() {
           )} */}
         </div>
       </div>
+
+      {/* Remote Check Modal */}
+      {showRemoteModal && (
+        <div className='fixed inset-0 z-50 flex'>
+          <div
+            className='absolute inset-0 bg-black/40'
+            onClick={() => setShowRemoteModal(false)}
+          ></div>
+          <div className='relative m-auto w-full max-w-md bg-white shadow-xl rounded-lg p-6'>
+            <h2 className='text-xl font-bold text-gray-900 mb-4'>
+              Check IPPS Over Internet
+            </h2>
+            <div className='mb-4'>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                IPPS ID
+              </label>
+              <input
+                type='text'
+                value={ippsId}
+                onChange={(e) => setIppsId(e.target.value)}
+                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primaryy focus:border-primaryy'
+                placeholder='Enter IPPS Number'
+              />
+            </div>
+            <button
+              onClick={handleRemoteCheck}
+              disabled={remoteLoading}
+              className='w-full px-4 py-2 bg-primaryy text-white rounded-md hover:bg-primaryx disabled:opacity-50 mb-4'
+            >
+              {remoteLoading ? 'Checking...' : 'Check'}
+            </button>
+            {remoteLoading && (
+              <div className='text-center mb-4'>
+                <p className='text-gray-500'>Loading...</p>
+              </div>
+            )}
+            {remoteEmployee && (
+              <div className='p-4 bg-green-50 rounded-md mb-4'>
+                <h3 className='font-semibold text-green-800'>Employee Found</h3>
+                <p className='text-gray-700'>Name: {remoteEmployee.name}</p>
+                <p className='text-gray-700'>
+                  Organisation: {remoteEmployee.organisation}
+                </p>
+              </div>
+            )}
+            {remoteError && (
+              <div className='p-4 bg-red-50 rounded-md mb-4'>
+                <p className='text-red-600'>{remoteError}</p>
+              </div>
+            )}
+            <div className='flex justify-end'>
+              <button
+                onClick={() => setShowRemoteModal(false)}
+                className='px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400'
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Exception Drawer */}
       {showDrawer && (

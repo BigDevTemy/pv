@@ -6,8 +6,8 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import pb from '@/lib/pb'
 import Image from 'next/image'
-import Logo from '../images/logo-me.png'
-import PemsoftLogo from '../images/pemsoft-logo.png'
+import Logo from '../../images/logo-me.png'
+import PemsoftLogo from '../../images/pemsoft-logo.png'
 import BarChart from '@mui/icons-material/BarChart'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import HourglassEmpty from '@mui/icons-material/HourglassEmpty'
@@ -153,7 +153,7 @@ export default function Dashboard() {
 
     router.push('/login')
   }
-  console.log('currentUserxxx', currentUser?.user_id, currentUser)
+  //console.log('currentUserxxx', currentUser?.user_id, currentUser)
 
   const totalVerifications = verifications.filter(
     (v) => v.status == 'complete'
@@ -447,7 +447,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div
-          className='mt-4 flex items-center justify-center  bottom-0 absolute'
+          className='mt-4 flex items-center justify-center'
           style={{ width: '90%' }}
         >
           <span className='text-sm text-gray-500 mr-4'>Powered By:</span>
